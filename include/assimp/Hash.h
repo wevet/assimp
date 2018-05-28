@@ -69,17 +69,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 // ------------------------------------------------------------------------------------------------
-inline uint32_t SuperFastHash (const char * data, uint32_t len = 0, uint32_t hash = 0) {
-uint32_t tmp;
-int rem;
+inline
+uint32_t SuperFastHash (const char * data, uint32_t len = 0, uint32_t hash = 0) {
+    if (!data) {
+        return 0;
+    }
 
-    if (!data) return 0;
-    if (!len)len = (uint32_t)::strlen(data);
-
-    rem = len & 3;
+    if (!len) {
+        len = (uint32_t)::strlen( data );
+    }
+    int rem = len & 3;
     len >>= 2;
 
     /* Main loop */
+    uint32_t tmp;
     for (;len > 0; len--) {
         hash  += get16bits (data);
         tmp    = (get16bits (data+2) << 11) ^ hash;

@@ -472,6 +472,8 @@ ADD_ASSIMP_IMPORTER( BLEND
 )
 
 ADD_ASSIMP_IMPORTER( IFC
+  Importer/IFC/IFCReaderGen_4.h
+  Importer/IFC/IFCReaderGen_4.cpp
   Importer/IFC/IFCLoader.cpp
   Importer/IFC/IFCLoader.h
   Importer/IFC/IFCReaderGen1_2x3.cpp
