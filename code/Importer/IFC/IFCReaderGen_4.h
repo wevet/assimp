@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_IFC_READER_GEN_H
 #define INCLUDED_IFC_READER_GEN_H
 
-#include "STEPFile.h"
+#include "code/STEPFile.h"
 
 namespace Assimp {
 namespace IFC {
@@ -4849,8 +4849,13 @@ namespace Schema_4 {
     };
 
     // C++ wrapper for IfcZShapeProfileDef
-    struct IfcZShapeProfileDef : IfcParameterizedProfileDef, ObjectHelper<IfcZShapeProfileDef,6> { IfcZShapeProfileDef() : Object("IfcZShapeProfileDef") {}
-		IfcPositiveLengthMeasure::Out Depth;
+    struct IfcZShapeProfileDef : IfcParameterizedProfileDef, ObjectHelper<IfcZShapeProfileDef,6> {
+        IfcZShapeProfileDef()
+        : Object("IfcZShapeProfileDef") {
+            // empty
+        }
+
+        IfcPositiveLengthMeasure::Out Depth;
 		IfcPositiveLengthMeasure::Out FlangeWidth;
 		IfcPositiveLengthMeasure::Out WebThickness;
 		IfcPositiveLengthMeasure::Out FlangeThickness;
@@ -4872,7 +4877,7 @@ namespace STEP {
     // Converter stubs
     // ******************************************************************************
 
-#define DECL_CONV_STUB(type) template <> size_t GenericFill<IFC::type>(const STEP::DB& db, const EXPRESS::LIST& params, IFC::type* in)
+#define DECL_CONV_STUB(type) template <> size_t GenericFill<IFC::Schema_4::type>(const STEP::DB& db, const EXPRESS::LIST& params, IFC::Schema_4::type* in)
 
     DECL_CONV_STUB( IfcRoot );
     DECL_CONV_STUB( IfcObjectDefinition );
