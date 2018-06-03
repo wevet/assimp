@@ -49,18 +49,17 @@ namespace Assimp {
 namespace IFC {
 namespace Schema_4 {
 
-	using namespace STEP;
-	using namespace STEP::EXPRESS;
+using namespace STEP;
+using namespace STEP::EXPRESS;
 	
-	
-	struct NotImplemented : public ObjectHelper<NotImplemented,0> {
+struct NotImplemented : public ObjectHelper<NotImplemented,0> {
 		
-	};
+};
 	
 
-	// ******************************************************************************
-	// IFC Custom data types
-	// ******************************************************************************
+// ******************************************************************************
+// IFC Custom data types
+// ******************************************************************************
 
 
     // C++ wrapper type for IfcStrippedOptional
