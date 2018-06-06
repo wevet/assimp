@@ -514,9 +514,9 @@ void glTF2Exporter::ExportMaterials()
             GetMatColor(mat, pbrSG.specularFactor, AI_MATKEY_COLOR_SPECULAR);
 
             if (mat->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS_GLOSSINESS_FACTOR, pbrSG.glossinessFactor) != AI_SUCCESS) {
-                float shininess;
+				float shininess;
 
-                if (mat->Get(AI_MATKEY_SHININESS, shininess)) {
+				if (mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
                     pbrSG.glossinessFactor = shininess / 1000;
                 }
             }
@@ -525,6 +525,12 @@ void glTF2Exporter::ExportMaterials()
             GetMatTex(mat, pbrSG.specularGlossinessTexture, aiTextureType_SPECULAR);
 
             m->pbrSpecularGlossiness = Nullable<PbrSpecularGlossiness>(pbrSG);
+        }
+
+        bool unlit;
+        if (mat->Get(AI_MATKEY_GLTF_UNLIT, unlit) == AI_SUCCESS && unlit) {
+            mAsset->extensionsUsed.KHR_materials_unlit = true;
+            m->unlit = true;
         }
     }
 }
