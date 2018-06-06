@@ -61,7 +61,6 @@ struct NotImplemented : public ObjectHelper<NotImplemented,0> {
 // IFC Custom data types
 // ******************************************************************************
 
-
     // C++ wrapper type for IfcStrippedOptional
     typedef BOOLEAN IfcStrippedOptional;
     // C++ wrapper type for IfcAbsorbedDoseMeasure
@@ -5454,4 +5453,4 @@ namespace STEP {
 } //! STEP
 } //! Assimp
 
-#endif // INCLUDED_IFC_READER_GEN_H
+#endif // INCLUDED_IFC_READER_GEN_4_H

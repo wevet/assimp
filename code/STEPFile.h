@@ -43,15 +43,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_STEPFILE_H
 #define INCLUDED_AI_STEPFILE_H
 
+#include "FBXDocument.h" //ObjectMap::value_type
+
 #include <bitset>
-#include <memory>
-#include <typeinfo>
+//#include <memory>
+//#include <typeinfo>
 #include <vector>
 #include <map>
 #include <set>
 
-#include "FBXDocument.h" //ObjectMap::value_type
-#include <assimp/DefaultLogger.hpp>
+//#include <assimp/DefaultLogger.hpp>
 
 //
 #if _MSC_VER > 1500 || (defined __GNUC___)
@@ -682,10 +683,11 @@ namespace STEP {
     /** Class template used to represent lazily evaluated object references in the converted schema */
     // ------------------------------------------------------------------------------
     template <typename T>
-    struct Lazy
-    {
-        typedef Lazy Out;
-        Lazy(const LazyObject* obj = NULL) : obj(obj) {
+    struct Lazy {
+        using Out = Lazy;
+        Lazy(const LazyObject* obj = nullptr )
+        : obj(obj) {
+            // empty
         }
 
         operator const T*() const {
@@ -823,8 +825,7 @@ namespace STEP {
      *  STEP file. DB's are exclusively maintained by the functions in
      *  STEPFileReader.h*/
     // -------------------------------------------------------------------------------
-    class DB
-    {
+    class DB{
         friend DB* ReadFileHeader(std::shared_ptr<IOStream> stream);
         friend void ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme,
             const char* const* types_to_track, size_t len,
@@ -1011,7 +1012,6 @@ namespace STEP {
         uint64_t evaluated_count;
         const EXPRESS::ConversionSchema* schema;
     };
-
 }
 
 } // end Assimp
