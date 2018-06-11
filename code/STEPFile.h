@@ -43,16 +43,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_STEPFILE_H
 #define INCLUDED_AI_STEPFILE_H
 
-#include "FBXDocument.h" //ObjectMap::value_type
+//#include "FBXDocument.h" //ObjectMap::value_type
 
+#include <map>
+#include <set>
 #include <bitset>
 //#include <memory>
 //#include <typeinfo>
-#include <vector>
-#include <map>
-#include <set>
+//#include <vector>
 
-//#include <assimp/DefaultLogger.hpp>
+#include <assimp/DefaultLogger.hpp>
 
 //
 #if _MSC_VER > 1500 || (defined __GNUC___)
@@ -61,6 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #   define step_unordered_map map
 #   define step_unordered_multimap multimap
 #endif
+
 
 #ifdef ASSIMP_STEP_USE_UNORDERED_MULTIMAP
 #   include <unordered_map>

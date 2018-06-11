@@ -1,4 +1,4 @@
-F/*
+/*
 Open Asset Import Library (ASSIMP)
 ----------------------------------------------------------------------
 
@@ -44,9 +44,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "IFCReaderGen_4.h"
 
+
 namespace Assimp {
 
-//using namespace IFC;
 using namespace ::Assimp::IFC::Schema_4;
 
 namespace {

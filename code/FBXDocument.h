@@ -46,11 +46,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_FBX_DOCUMENT_H
 #define INCLUDED_AI_FBX_DOCUMENT_H
 
-#include <numeric>
-#include <stdint.h>
-#include <assimp/mesh.h>
-#include "FBXProperties.h"
-#include "FBXParser.h"
+//#include <numeric>
+//#include <stdint.h>
+//#include "FBXProperties.h"
+//#include "FBXParser.h"
+//#include <assimp/mesh.h>
 
 #define _AI_CONCAT(a,b)  a ## b
 #define  AI_CONCAT(a,b)  _AI_CONCAT(a,b)
