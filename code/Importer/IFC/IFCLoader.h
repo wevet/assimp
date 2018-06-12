@@ -72,11 +72,27 @@ namespace Assimp    {
 class IFCImporter : public BaseImporter, public LogFunctions<IFCImporter>
 {
 public:
+    // loader settings, publicly accessible via their corresponding AI_CONFIG constants
+    struct Settings {
+        Settings()
+            : skipSpaceRepresentations()
+            , useCustomTriangulation()
+            , skipAnnotations()
+            , conicSamplingAngle( 10.f )
+            , cylindricalTessellation( 32 ) {
+            // empty
+        }
+
+        bool skipSpaceRepresentations;
+        bool useCustomTriangulation;
+        bool skipAnnotations;
+        float conicSamplingAngle;
+        int cylindricalTessellation;
+    };
+
+
     IFCImporter();
     ~IFCImporter();
-
-
-public:
 
     // --------------------
     bool CanRead( const std::string& pFile,
@@ -99,36 +115,10 @@ protected:
     );
 
 private:
-
-
-public:
-
-
-    // loader settings, publicly accessible via their corresponding AI_CONFIG constants
-    struct Settings
-    {
-        Settings()
-            : skipSpaceRepresentations()
-            , useCustomTriangulation()
-            , skipAnnotations()
-            , conicSamplingAngle(10.f)
-			, cylindricalTessellation(32)
-        {}
-
-
-        bool skipSpaceRepresentations;
-        bool useCustomTriangulation;
-        bool skipAnnotations;
-        float conicSamplingAngle;
-		int cylindricalTessellation;
-    };
-
-
-private:
-
     Settings settings;
 
 }; // !class IFCImporter
 
 } // end of namespace Assimp
+
 #endif // !INCLUDED_AI_IFC_LOADER_H

@@ -64,7 +64,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/Importer.hpp>
 #include <assimp/importerdesc.h>
 
-
 namespace Assimp {
     template<> const char* LogFunctions<IFCImporter>::Prefix() {
         static auto prefix = "IFC: ";
@@ -148,8 +147,7 @@ bool IFCImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool 
 
 // ------------------------------------------------------------------------------------------------
 // List all extensions handled by this loader
-const aiImporterDesc* IFCImporter::GetInfo () const
-{
+const aiImporterDesc* IFCImporter::GetInfo() const {
     return &desc;
 }
 
@@ -164,6 +162,24 @@ void IFCImporter::SetupProperties(const Importer* pImp)
 	settings.skipAnnotations = true;
 }
 
+// ------------------------------------------------------------------------------------------------
+// tell the reader which entity types to track with special care
+static const char* const types_to_track[] = {
+    "ifcsite",
+    "ifcbuilding",
+    "ifcproject"
+};
+
+// ------------------------------------------------------------------------------------------------
+// tell the reader for which types we need to simulate STEPs reverse indices
+static const char* const inverse_indices_to_track[] = {
+    "ifcrelcontainedinspatialstructure",
+    "ifcrelaggregates",
+    "ifcrelvoidselement",
+    "ifcreldefinesbyproperties",
+    "ifcpropertyset",
+    "ifcstyleditem"
+};
 
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
@@ -237,33 +253,29 @@ void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
     std::unique_ptr<STEP::DB> db(STEP::ReadFileHeader(stream));
     const STEP::HeaderInfo& head = static_cast<const STEP::DB&>(*db).GetHeader();
 
-    if(!head.fileSchema.size() || head.fileSchema.substr(0,3) != "IFC") {
+    if ( head.fileSchema.empty() || head.fileSchema.substr(0,3) != "IFC") {
         ThrowException("Unrecognized file schema: " + head.fileSchema);
     }
 
+    const size_t len( head.fileSchema.size() );
+    const std::string schemaVersion = head.fileSchema.substr( 3, len - 3 );
     if (!DefaultLogger::isNullLogger()) {
-        LogDebug("File schema is \'" + head.fileSchema + '\'');
+        LogDebug( "File schema is \'" + head.fileSchema + '\'' );
         if (head.timestamp.length()) {
-            LogDebug("Timestamp \'" + head.timestamp + '\'');
+            LogDebug( "Timestamp \'" + head.timestamp + '\'' );
         }
         if (head.app.length()) {
-            LogDebug("Application/Exporter identline is \'" + head.app  + '\'');
+            LogDebug( "Application/Exporter identline is \'" + head.app + '\'' );
         }
     }
 
     // obtain a copy of the machine-generated IFC scheme
     ::Assimp::STEP::EXPRESS::ConversionSchema schema;
-    Schema_2x3::GetSchema(schema);
-
-    // tell the reader which entity types to track with special care
-    static const char* const types_to_track[] = {
-        "ifcsite", "ifcbuilding", "ifcproject"
-    };
-
-    // tell the reader for which types we need to simulate STEPs reverse indices
-    static const char* const inverse_indices_to_track[] = {
-        "ifcrelcontainedinspatialstructure", "ifcrelaggregates", "ifcrelvoidselement", "ifcreldefinesbyproperties", "ifcpropertyset", "ifcstyleditem"
-    };
+    if (schemaVersion == "2X3") {
+        Schema_2x3::GetSchema( schema );
+    } else if (schemaVersion == "4") {
+        Schema_4::GetSchema( schema );
+    }
 
     // feed the IFC schema into the reader and pre-parse all lines
     STEP::ReadFile(*db, schema, types_to_track, inverse_indices_to_track);
@@ -361,27 +373,23 @@ void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData& con
         }
 
         ConvertUnit(unit,conv);
-    }
-    catch(std::bad_cast&) {
+    } catch(std::bad_cast&) {
         // not entity, somehow
         IFCImporter::LogError("skipping unknown IfcUnit entry - expected entity");
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-void SetUnits(ConversionData& conv)
-{
+void SetUnits( ConversionData& conv ) {
     // see if we can determine the coordinate space used to express.
-    for(size_t i = 0; i <  conv.proj.UnitsInContext->Units.size(); ++i ) {
+    for ( size_t i = 0; i <  conv.proj.UnitsInContext->Units.size(); ++i ) {
         ConvertUnit(*conv.proj.UnitsInContext->Units[i],conv);
     }
 }
 
-
 // ------------------------------------------------------------------------------------------------
-void SetCoordinateSpace(ConversionData& conv)
-{
-    const Schema_2x3::IfcRepresentationContext* fav = NULL;
+void SetCoordinateSpace(ConversionData& conv) {
+    const Schema_2x3::IfcRepresentationContext* fav( nullptr );
     for(const Schema_2x3::IfcRepresentationContext& v : conv.proj.RepresentationContexts) {
         fav = &v;
         // Model should be the most suitable type of context, hence ignore the others
@@ -390,7 +398,7 @@ void SetCoordinateSpace(ConversionData& conv)
         }
     }
     if (fav) {
-        if(const Schema_2x3::IfcGeometricRepresentationContext* const geo = fav->ToPtr<Schema_2x3::IfcGeometricRepresentationContext>()) {
+        if (const Schema_2x3::IfcGeometricRepresentationContext* const geo = fav->ToPtr<Schema_2x3::IfcGeometricRepresentationContext>()) {
             ConvertAxisPlacement(conv.wcs, *geo->WorldCoordinateSystem, conv);
             IFCImporter::LogDebug("got world coordinate system");
         }

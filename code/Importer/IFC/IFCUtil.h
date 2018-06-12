@@ -48,6 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDED_IFCUTIL_H
 
 #include "IFCReaderGen_2x3.h"
+#include "IFCReaderGen_4.h"
 #include "IFCLoader.h"
 #include "code/STEPFile.h"
 #include <assimp/mesh.h>
@@ -58,14 +59,14 @@ struct aiNode;
 namespace Assimp {
 namespace IFC {
 
-    typedef double IfcFloat;
+typedef double IfcFloat;
 
-    // IfcFloat-precision math data types
-    typedef aiVector2t<IfcFloat> IfcVector2;
-    typedef aiVector3t<IfcFloat> IfcVector3;
-    typedef aiMatrix4x4t<IfcFloat> IfcMatrix4;
-    typedef aiMatrix3x3t<IfcFloat> IfcMatrix3;
-    typedef aiColor4t<IfcFloat> IfcColor4;
+// IfcFloat-precision math data types
+typedef aiVector2t<IfcFloat> IfcVector2;
+typedef aiVector3t<IfcFloat> IfcVector3;
+typedef aiMatrix4x4t<IfcFloat> IfcMatrix4;
+typedef aiMatrix3x3t<IfcFloat> IfcMatrix3;
+typedef aiColor4t<IfcFloat> IfcColor4;
 
 
 // ------------------------------------------------------------------------------------------------
@@ -108,12 +109,10 @@ bool TempMesh::IsEmpty() const {
     return mVerts.empty() && mVertcnt.empty();
 }
 
-
 // ------------------------------------------------------------------------------------------------
 // Temporary representation of an opening in a wall or a floor
 // ------------------------------------------------------------------------------------------------
-struct TempOpening
-{
+struct TempOpening {
     const IFC::Schema_2x3::IfcSolidModel *solid;
     IfcVector3 extrusionDir;
 
@@ -129,33 +128,34 @@ struct TempOpening
 
     // ------------------------------------------------------------------------------
     TempOpening()
-        : solid()
-        , extrusionDir()
-        , profileMesh()
-    {
+    : solid()
+    , extrusionDir()
+    , profileMesh() {
+        // empty
     }
 
     // ------------------------------------------------------------------------------
     TempOpening(const IFC::Schema_2x3::IfcSolidModel* solid,IfcVector3 extrusionDir,
-        std::shared_ptr<TempMesh> profileMesh,
-        std::shared_ptr<TempMesh> profileMesh2D)
-        : solid(solid)
-        , extrusionDir(extrusionDir)
-        , profileMesh(profileMesh)
-        , profileMesh2D(profileMesh2D)
-    {
+            std::shared_ptr<TempMesh> profileMesh,
+            std::shared_ptr<TempMesh> profileMesh2D)
+    : solid(solid)
+    , extrusionDir(extrusionDir)
+    , profileMesh(profileMesh)
+    , profileMesh2D(profileMesh2D) {
+        // empty
     }
 
     // ------------------------------------------------------------------------------
-    void Transform(const IfcMatrix4& mat); // defined later since TempMesh is not complete yet
-
-
+    // defined later since TempMesh is not complete yet
+    void Transform(const IfcMatrix4& mat); 
 
     // ------------------------------------------------------------------------------
     // Helper to sort openings by distance from a given base point
     struct DistanceSorter {
-
-        DistanceSorter(const IfcVector3& base) : base(base) {}
+        DistanceSorter(const IfcVector3& base) 
+        : base(base) {
+            // empty
+        }
 
         bool operator () (const TempOpening& a, const TempOpening& b) const {
             return (a.profileMesh->Center()-base).SquareLength() < (b.profileMesh->Center()-base).SquareLength();
