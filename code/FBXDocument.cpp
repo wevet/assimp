@@ -291,6 +291,10 @@ Document::~Document()
     // |dest_connections| contain the same Connection objects as the |src_connections|
 }
 
+bool Document::IsBinary() const {
+    return parser.IsBinary();
+}
+
 // ------------------------------------------------------------------------------------------------
 static const unsigned int LowerSupportedVersion = 7100;
 static const unsigned int UpperSupportedVersion = 7400;

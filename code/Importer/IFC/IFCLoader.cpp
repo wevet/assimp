@@ -44,7 +44,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the Industry Foundation Classes loader.
  */
 
-
 #ifndef ASSIMP_BUILD_NO_IFC_IMPORTER
 
 #include <iterator>
@@ -67,8 +66,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 namespace Assimp {
-    template<> const char* LogFunctions<IFCImporter>::Prefix()
-    {
+    template<> const char* LogFunctions<IFCImporter>::Prefix() {
         static auto prefix = "IFC: ";
         return prefix;
     }
@@ -144,6 +142,7 @@ bool IFCImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool 
         const bool found( SearchFileHeaderForToken( pIOHandler, pFile, tokens, 1 ) );
         return found;
     }
+
     return false;
 }
 

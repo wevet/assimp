@@ -46,11 +46,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_FBX_DOCUMENT_H
 #define INCLUDED_AI_FBX_DOCUMENT_H
 
-//#include <numeric>
-//#include <stdint.h>
-//#include "FBXProperties.h"
-//#include "FBXParser.h"
-//#include <assimp/mesh.h>
+#include <numeric>
+#include <stdint.h>
+#include "FBXProperties.h"
+#include <assimp/ai_assert.h>
+#include <assimp/mesh.h>
 
 #define _AI_CONCAT(a,b)  a ## b
 #define  AI_CONCAT(a,b)  _AI_CONCAT(a,b)
@@ -73,6 +73,7 @@ class AnimationCurve;
 class AnimationCurveNode;
 class AnimationLayer;
 class AnimationStack;
+class Element;
 
 class Skin;
 class Cluster;
@@ -1067,9 +1068,7 @@ public:
 
     LazyObject* GetObject(uint64_t id) const;
 
-    bool IsBinary() const {
-        return parser.IsBinary();
-    }
+    bool IsBinary() const;
 
     unsigned int FBXVersion() const {
         return fbxVersion;

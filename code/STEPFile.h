@@ -43,14 +43,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_STEPFILE_H
 #define INCLUDED_AI_STEPFILE_H
 
-//#include "FBXDocument.h" //ObjectMap::value_type
+#include "FBXDocument.h" //ObjectMap::value_type
 
 #include <map>
 #include <set>
 #include <bitset>
-//#include <memory>
-//#include <typeinfo>
-//#include <vector>
+#include <memory>
+#include <typeinfo>
+#include <vector>
 
 #include <assimp/DefaultLogger.hpp>
 
