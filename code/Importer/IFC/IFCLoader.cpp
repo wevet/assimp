@@ -390,7 +390,7 @@ void SetUnits( ConversionData& conv ) {
 // ------------------------------------------------------------------------------------------------
 void SetCoordinateSpace(ConversionData& conv) {
     const Schema_2x3::IfcRepresentationContext* fav( nullptr );
-    for(const Schema_2x3::IfcRepresentationContext& v : conv.proj.RepresentationContexts) {
+    for ( const Schema_2x3::IfcRepresentationContext& v : conv.proj.RepresentationContexts) {
         fav = &v;
         // Model should be the most suitable type of context, hence ignore the others
         if (v.ContextType && v.ContextType.Get() == "Model") {
@@ -407,9 +407,8 @@ void SetCoordinateSpace(ConversionData& conv) {
 
 
 // ------------------------------------------------------------------------------------------------
-void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement& place, ConversionData& conv)
-{
-    if (const Schema_2x3::IfcLocalPlacement* const local = place.ToPtr<Schema_2x3::IfcLocalPlacement>()){
+void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement& place, ConversionData& conv) {
+    if ( const Schema_2x3::IfcLocalPlacement* const local = place.ToPtr<Schema_2x3::IfcLocalPlacement>()){
         IfcMatrix4 tmp;
         ConvertAxisPlacement(tmp, *local->RelativePlacement, conv);
 
@@ -420,15 +419,14 @@ void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement
             ResolveObjectPlacement(tmp,local->PlacementRelTo.Get(),conv);
             m = tmp * m;
         }
-    }
-    else {
+    } else {
         IFCImporter::LogWarn("skipping unknown IfcObjectPlacement entity, type is " + place.GetClassName());
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-bool ProcessMappedItem(const Schema_2x3::IfcMappedItem& mapped, aiNode* nd_src, std::vector< aiNode* >& subnodes_src, unsigned int matid, ConversionData& conv)
-{
+bool ProcessMappedItem(const Schema_2x3::IfcMappedItem& mapped, aiNode* nd_src,
+        std::vector<aiNode*> &subnodes_src, unsigned int matid, ConversionData& conv) {
     // insert a custom node here, the carthesian transform operator is simply a conventional transformation matrix
     std::unique_ptr<aiNode> nd(new aiNode());
     nd->mName.Set("IfcMappedItem");
@@ -456,11 +454,12 @@ bool ProcessMappedItem(const Schema_2x3::IfcMappedItem& mapped, aiNode* nd_src, 
     const Schema_2x3::IfcRepresentation& repr = mapped.MappingSource->MappedRepresentation;
 
     bool got = false;
-    for(const Schema_2x3::IfcRepresentationItem& item : repr.Items) {
+    for ( const Schema_2x3::IfcRepresentationItem& item : repr.Items) {
         if(!ProcessRepresentationItem(item,localmatid,meshes,conv)) {
             IFCImporter::LogWarn("skipping mapped entity of type " + item.GetClassName() + ", no representations could be generated");
+        } else {
+            got = true;
         }
-        else got = true;
     }
 
     if (!got) {
@@ -469,7 +468,6 @@ bool ProcessMappedItem(const Schema_2x3::IfcMappedItem& mapped, aiNode* nd_src, 
 
     AssignAddedMeshes(meshes,nd.get(),conv);
     if (conv.collect_openings) {
-
         // if this pass serves us only to collect opening geometry,
         // make sure we transform the TempMesh's which we need to
         // preserve as well.
