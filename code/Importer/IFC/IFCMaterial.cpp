@@ -69,7 +69,7 @@ static int ConvertShadingMode(const std::string& name) {
 }
 
 // ------------------------------------------------------------------------------------------------
-static void FillMaterial(aiMaterial* mat,const IFC::Schema_2x3::IfcSurfaceStyle* surf,ConversionData& conv) {
+static void FillMaterial(aiMaterial* mat,const IFC::Schema_2x3::IfcSurfaceStyle* surf,ConversionData2x3& conv) {
     aiString name;
     name.Set((surf->Name? surf->Name.Get() : "IfcSurfaceStyle_Unnamed"));
     mat->AddProperty(&name,AI_MATKEY_NAME);
@@ -129,7 +129,7 @@ static void FillMaterial(aiMaterial* mat,const IFC::Schema_2x3::IfcSurfaceStyle*
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned int ProcessMaterials(uint64_t id, unsigned int prevMatId, ConversionData& conv, bool forceDefaultMat) {
+unsigned int ProcessMaterials(uint64_t id, unsigned int prevMatId, ConversionData2x3& conv, bool forceDefaultMat) {
     STEP::DB::RefMapRange range = conv.db.GetRefs().equal_range(id);
     for(;range.first != range.second; ++range.first) {
         if(const IFC::Schema_2x3::IfcStyledItem* const styled = conv.db.GetObject((*range.first).second)->ToPtr<IFC::Schema_2x3::IfcStyledItem>()) {
@@ -138,7 +138,7 @@ unsigned int ProcessMaterials(uint64_t id, unsigned int prevMatId, ConversionDat
 
                     if( const IFC::Schema_2x3::IfcSurfaceStyle* const surf = sel->ResolveSelectPtr<IFC::Schema_2x3::IfcSurfaceStyle>(conv.db) ) {
                         // try to satisfy from cache
-                        ConversionData::MaterialCache::iterator mit = conv.cached_materials.find(surf);
+                        ConversionData2x3::MaterialCache::iterator mit = conv.cached_materials.find(surf);
                         if( mit != conv.cached_materials.end() )
                             return mit->second;
 

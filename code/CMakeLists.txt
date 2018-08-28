@@ -491,6 +491,10 @@ ADD_ASSIMP_IMPORTER( IFC
   Importer/IFC/STEPFileReader.cpp
   Importer/IFC/STEPFileEncoding.cpp
   Importer/IFC/STEPFileEncoding.h
+  Importer/IFC/IFCSchema2x3Loader.h
+  Importer/IFC/IFCSchema2x3Loader.cpp
+  Importer/IFC/IFCSchema4Loader.h
+  Importer/IFC/IFCSchema4Loader.cpp
 )
 if (ASSIMP_BUILD_IFC_IMPORTER)
   if (MSVC)

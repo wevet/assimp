@@ -48,6 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <assimp/BaseImporter.h>
 #include <assimp/LogAux.h>
+#include <memory>
 
 namespace Assimp    {
 
@@ -61,6 +62,10 @@ namespace Assimp    {
         class DB;
     }
 
+    namespace IFC {
+        struct ConversionData2x3;
+        struct ConversionData4;
+    }
 
 // -------------------------------------------------------------------------------------------
 /** Load the IFC format, which is an open specification to describe building and construction
@@ -101,18 +106,14 @@ public:
     ) const;
 
 protected:
-
-    // --------------------
     const aiImporterDesc* GetInfo () const;
-
-    // --------------------
     void SetupProperties(const Importer* pImp);
-
-    // --------------------
     void InternReadFile( const std::string& pFile,
         aiScene* pScene,
         IOSystem* pIOHandler
     );
+    void convertAsset2x3( IFC::ConversionData2x3 &conv, STEP::DB *db, aiScene* pScene, IOSystem* pIOHandler );
+    void convertAsset4( IFC::ConversionData4 &conv, STEP::DB *db, aiScene* pScene, IOSystem* pIOHandler );
 
 private:
     Settings settings;

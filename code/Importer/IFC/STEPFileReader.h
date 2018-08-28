@@ -62,9 +62,9 @@ void ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme, const char* const*
     
 template <size_t N, size_t N2> 
 inline 
-void ReadFile(DB& db, const EXPRESS::ConversionSchema& scheme, const char* const (&arr)[N], 
+void ReadFile(DB& db, const EXPRESS::ConversionSchema& schema, const char* const (&arr)[N], 
         const char* const (&arr2)[N2]) {
-    return ReadFile(db,scheme,arr,N,arr2,N2);
+    return ReadFile(db, schema,arr,N,arr2,N2);
 }
 
 } // ! STEP

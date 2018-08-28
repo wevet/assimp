@@ -72,7 +72,7 @@ protected:
 
         // We define the struct size because sizeof(Header) might return a wrong result because of structure padding.
         // Moreover, we must use this ugly and error prone syntax because Visual Studio neither support constexpr or sizeof(name_of_field).
-        static const std::size_t header_size =
+        static constexpr std::size_t header_size =
             sizeof(uint16_t) + // type
             sizeof(uint32_t) + // size
             sizeof(uint16_t) + // reserved1

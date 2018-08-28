@@ -58,7 +58,7 @@ namespace {
 class Conic : public Curve {
 public:
     // --------------------------------------------------
-    Conic(const Schema_2x3::IfcConic& entity, ConversionData& conv)
+    Conic(const Schema_2x3::IfcConic& entity, ConversionData2x3& conv)
     : Curve(entity,conv) {
         IfcMatrix4 trafo;
         ConvertAxisPlacement(trafo,*entity.Position,conv);
@@ -104,7 +104,7 @@ protected:
 class Circle : public Conic {
 public:
     // --------------------------------------------------
-    Circle(const Schema_2x3::IfcCircle& entity, ConversionData& conv)
+    Circle(const Schema_2x3::IfcCircle& entity, ConversionData2x3& conv)
         : Conic(entity,conv)
         , entity(entity)
     {
@@ -127,7 +127,7 @@ private:
 class Ellipse : public Conic {
 public:
     // --------------------------------------------------
-    Ellipse(const Schema_2x3::IfcEllipse& entity, ConversionData& conv)
+    Ellipse(const Schema_2x3::IfcEllipse& entity, ConversionData2x3& conv)
     : Conic(entity,conv)
     , entity(entity) {
         // empty
@@ -150,7 +150,7 @@ private:
 class Line : public Curve {
 public:
     // --------------------------------------------------
-    Line(const Schema_2x3::IfcLine& entity, ConversionData& conv)
+    Line(const Schema_2x3::IfcLine& entity, ConversionData2x3& conv)
     : Curve(entity,conv) {
         ConvertCartesianPoint(p,entity.Pnt);
         ConvertVector(v,entity.Dir);
@@ -208,7 +208,7 @@ class CompositeCurve : public BoundedCurve {
 
 public:
     // --------------------------------------------------
-    CompositeCurve(const Schema_2x3::IfcCompositeCurve& entity, ConversionData& conv)
+    CompositeCurve(const Schema_2x3::IfcCompositeCurve& entity, ConversionData2x3& conv)
     : BoundedCurve(entity,conv)
     , total() {
         curves.reserve(entity.Segments.size());
@@ -310,7 +310,7 @@ private:
 class TrimmedCurve : public BoundedCurve {
 public:
     // --------------------------------------------------
-    TrimmedCurve(const Schema_2x3::IfcTrimmedCurve& entity, ConversionData& conv)
+    TrimmedCurve(const Schema_2x3::IfcTrimmedCurve& entity, ConversionData2x3& conv)
         : BoundedCurve(entity,conv)
     {
         base = std::shared_ptr<const Curve>(Curve::Convert(entity.BasisCurve,conv));
@@ -420,7 +420,7 @@ private:
 class PolyLine : public BoundedCurve {
 public:
     // --------------------------------------------------
-    PolyLine(const Schema_2x3::IfcPolyline& entity, ConversionData& conv)
+    PolyLine(const Schema_2x3::IfcPolyline& entity, ConversionData2x3& conv)
         : BoundedCurve(entity,conv)
     {
         points.reserve(entity.Points.size());
@@ -463,7 +463,7 @@ private:
 } // anon
 
 // ------------------------------------------------------------------------------------------------
-Curve* Curve::Convert(const IFC::Schema_2x3::IfcCurve& curve,ConversionData& conv) {
+Curve* Curve::Convert(const IFC::Schema_2x3::IfcCurve& curve,ConversionData2x3& conv) {
     if(curve.ToPtr<Schema_2x3::IfcBoundedCurve>()) {
         if(const Schema_2x3::IfcPolyline* c = curve.ToPtr<Schema_2x3::IfcPolyline>()) {
             return new PolyLine(*c,conv);

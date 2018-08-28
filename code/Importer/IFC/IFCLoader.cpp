@@ -57,6 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "IFCLoader.h"
 #include "STEPFileReader.h"
 
+#include "IFCSchema4Loader.h"
 #include "IFCUtil.h"
 
 #include <assimp/MemoryIOWrapper.h>
@@ -93,11 +94,11 @@ namespace {
 
 
 // forward declarations
-void SetUnits(ConversionData& conv);
-void SetCoordinateSpace(ConversionData& conv);
-void ProcessSpatialStructures(ConversionData& conv);
-void MakeTreeRelative(ConversionData& conv);
-void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData& conv);
+void SetUnits(ConversionData2x3& conv);
+void SetCoordinateSpace(ConversionData2x3& conv);
+void ProcessSpatialStructures(ConversionData2x3& conv);
+void MakeTreeRelative(ConversionData2x3& conv);
+void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData2x3& conv);
 
 } // anon
 
@@ -181,80 +182,86 @@ static const char* const inverse_indices_to_track[] = {
     "ifcstyleditem"
 };
 
+enum class StepSchemaType {
+    NotInited,
+    Schema2_3,
+    Schema4
+};
+
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
-void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler)
+void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler )
 {
-    std::shared_ptr<IOStream> stream(pIOHandler->Open(pFile));
+    std::shared_ptr<IOStream> stream( pIOHandler->Open( pFile ) );
     if (!stream) {
-        ThrowException("Could not open file for reading");
+        ThrowException( "Could not open file for reading" );
     }
 
 
     // if this is a ifczip file, decompress its contents first
-    if(GetExtension(pFile) == "ifczip") {
+    if (GetExtension( pFile ) == "ifczip") {
 #ifndef ASSIMP_BUILD_NO_COMPRESSED_IFC
         unzFile zip = unzOpen( pFile.c_str() );
-        if(zip == NULL) {
-            ThrowException("Could not open ifczip file for reading, unzip failed");
+        if (zip == NULL) {
+            ThrowException( "Could not open ifczip file for reading, unzip failed" );
         }
 
         // chop 'zip' postfix
-        std::string fileName = pFile.substr(0,pFile.length() - 3);
+        std::string fileName = pFile.substr( 0, pFile.length() - 3 );
 
-        std::string::size_type s = pFile.find_last_of('\\');
-        if(s == std::string::npos) {
-            s = pFile.find_last_of('/');
+        std::string::size_type s = pFile.find_last_of( '\\' );
+        if (s == std::string::npos) {
+            s = pFile.find_last_of( '/' );
         }
-        if(s != std::string::npos) {
-            fileName = fileName.substr(s+1);
+        if (s != std::string::npos) {
+            fileName = fileName.substr( s + 1 );
         }
 
         // search file (same name as the IFCZIP except for the file extension) and place file pointer there
-        if(UNZ_OK == unzGoToFirstFile(zip)) {
+        if (UNZ_OK == unzGoToFirstFile( zip )) {
             do {
                 // get file size, etc.
                 unz_file_info fileInfo;
-                char filename[256];
-                unzGetCurrentFileInfo( zip , &fileInfo, filename, sizeof(filename), 0, 0, 0, 0 );
-                if (GetExtension(filename) != "ifc") {
+                char filename[ 256 ];
+                unzGetCurrentFileInfo( zip, &fileInfo, filename, sizeof( filename ), 0, 0, 0, 0 );
+                if (GetExtension( filename ) != "ifc") {
                     continue;
                 }
-                uint8_t* buff = new uint8_t[fileInfo.uncompressed_size];
-                LogInfo("Decompressing IFCZIP file");
-                unzOpenCurrentFile( zip  );
-                const int ret = unzReadCurrentFile( zip, buff, fileInfo.uncompressed_size);
+                uint8_t* buff = new uint8_t[ fileInfo.uncompressed_size ];
+                LogInfo( "Decompressing IFCZIP file" );
+                unzOpenCurrentFile( zip );
+                const int ret = unzReadCurrentFile( zip, buff, fileInfo.uncompressed_size );
                 size_t filesize = fileInfo.uncompressed_size;
-                if ( ret < 0 || size_t(ret) != filesize )
+                if (ret < 0 || size_t( ret ) != filesize)
                 {
                     delete[] buff;
-                    ThrowException("Failed to decompress IFC ZIP file");
+                    ThrowException( "Failed to decompress IFC ZIP file" );
                 }
                 unzCloseCurrentFile( zip );
-                stream.reset(new MemoryIOStream(buff,fileInfo.uncompressed_size,true));
+                stream.reset( new MemoryIOStream( buff, fileInfo.uncompressed_size, true ) );
                 break;
 
-                if (unzGoToNextFile(zip) == UNZ_END_OF_LIST_OF_FILE) {
-                    ThrowException("Found no IFC file member in IFCZIP file (1)");
+                if (unzGoToNextFile( zip ) == UNZ_END_OF_LIST_OF_FILE) {
+                    ThrowException( "Found no IFC file member in IFCZIP file (1)" );
                 }
 
-            } while(true);
+            } while (true);
         }
         else {
-            ThrowException("Found no IFC file member in IFCZIP file (2)");
+            ThrowException( "Found no IFC file member in IFCZIP file (2)" );
         }
 
-        unzClose(zip);
+        unzClose( zip );
 #else
-        ThrowException("Could not open ifczip file for reading, assimp was built without ifczip support");
+        ThrowException( "Could not open ifczip file for reading, assimp was built without ifczip support" );
 #endif
     }
 
-    std::unique_ptr<STEP::DB> db(STEP::ReadFileHeader(stream));
+    std::unique_ptr<STEP::DB> db( STEP::ReadFileHeader( stream ) );
     const STEP::HeaderInfo& head = static_cast<const STEP::DB&>(*db).GetHeader();
 
-    if ( head.fileSchema.empty() || head.fileSchema.substr(0,3) != "IFC") {
-        ThrowException("Unrecognized file schema: " + head.fileSchema);
+    if (head.fileSchema.empty() || head.fileSchema.substr( 0, 3 ) != "IFC") {
+        ThrowException( "Unrecognized file schema: " + head.fileSchema );
     }
 
     const size_t len( head.fileSchema.size() );
@@ -271,20 +278,36 @@ void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
 
     // obtain a copy of the machine-generated IFC scheme
     ::Assimp::STEP::EXPRESS::ConversionSchema schema;
+    StepSchemaType schemaType( StepSchemaType::NotInited );
     if (schemaVersion == "2X3") {
         Schema_2x3::GetSchema( schema );
-    } else if (schemaVersion == "4") {
+        schemaType = StepSchemaType::Schema2_3;
+    }
+    else if (schemaVersion == "4") {
         Schema_4::GetSchema( schema );
+        schemaType = StepSchemaType::Schema4;
     }
 
     // feed the IFC schema into the reader and pre-parse all lines
-    STEP::ReadFile(*db, schema, types_to_track, inverse_indices_to_track);
-    const STEP::LazyObject* proj =  db->GetObject("ifcproject");
-    if (!proj) {
-        ThrowException("missing IfcProject entity");
+    STEP::ReadFile( *db, schema, types_to_track, inverse_indices_to_track );
+    const STEP::LazyObject *proj = db->GetObject( "ifcproject" );
+    if (nullptr == proj) {
+        ThrowException( "missing IfcProject entity" );
     }
 
-    ConversionData conv(*db,proj->To<Schema_2x3::IfcProject>(),pScene,settings);
+    if (StepSchemaType::Schema2_3 == schemaType) {
+        ConversionData2x3 conv( *db, proj->To<Schema_2x3::IfcProject>(), pScene, settings );
+        convertAsset2x3( conv, db.get(), pScene, pIOHandler );
+    }
+    else if (StepSchemaType::Schema4 == schemaType) {
+        ConversionData4 conv( *db, proj->To<Schema_4::IfcProject>(), pScene, settings );
+        convertAsset4( conv, db.get(), pScene, pIOHandler );
+    }
+    else {
+        LogError( "Unknown schema type " + schemaVersion );
+        return;
+    }
+    /*ConversionData conv(*db,proj->To<Schema_2x3::IfcProject>(),pScene,settings);
     SetUnits(conv);
     SetCoordinateSpace(conv);
     ProcessSpatialStructures(conv);
@@ -328,13 +351,65 @@ void IFCImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
     if ( !DefaultLogger::isNullLogger() ){
         LogDebug((Formatter::format(),"STEP: evaluated ",db->GetEvaluatedObjectCount()," object records"));
     }
+}*/
+}
+
+void IFCImporter::convertAsset2x3( ConversionData2x3 &conv, STEP::DB *db, aiScene* pScene, IOSystem* pIOHandler ) {
+    SetUnits( conv );
+    SetCoordinateSpace( conv );
+    ProcessSpatialStructures( conv );
+    MakeTreeRelative( conv );
+
+    // NOTE - this is a stress test for the importer, but it works only
+    // in a build with no entities disabled. See
+    //     scripts/IFCImporter/CPPGenerator.py
+    // for more information.
+#ifdef ASSIMP_IFC_TEST
+    db->EvaluateAll();
+#endif
+
+    // do final data copying
+    if (conv.meshes.size()) {
+        pScene->mNumMeshes = static_cast<unsigned int>(conv.meshes.size());
+        pScene->mMeshes = new aiMesh*[ pScene->mNumMeshes ]();
+        std::copy( conv.meshes.begin(), conv.meshes.end(), pScene->mMeshes );
+
+        // needed to keep the d'tor from burning us
+        conv.meshes.clear();
+    }
+
+    if (conv.materials.size()) {
+        pScene->mNumMaterials = static_cast<unsigned int>(conv.materials.size());
+        pScene->mMaterials = new aiMaterial*[ pScene->mNumMaterials ]();
+        std::copy( conv.materials.begin(), conv.materials.end(), pScene->mMaterials );
+
+        // needed to keep the d'tor from burning us
+        conv.materials.clear();
+    }
+
+    // apply world coordinate system (which includes the scaling to convert to meters and a -90 degrees rotation around x)
+    aiMatrix4x4 scale, rot;
+    aiMatrix4x4::Scaling( static_cast<aiVector3D>(IfcVector3( conv.len_scale )), scale );
+    aiMatrix4x4::RotationX( -AI_MATH_HALF_PI_F, rot );
+
+    pScene->mRootNode->mTransformation = rot * scale * conv.wcs * pScene->mRootNode->mTransformation;
+
+    // this must be last because objects are evaluated lazily as we process them
+    if (!DefaultLogger::isNullLogger()) {
+        LogDebug( (Formatter::format(), "STEP: evaluated ", db->GetEvaluatedObjectCount(), " object records") );
+    }
+
+}
+
+void IFCImporter::convertAsset4( IFC::ConversionData4 &conv, STEP::DB *db, aiScene* pScene, IOSystem* pIOHandler ) {
+
 }
 
 namespace {
 
 
 // ------------------------------------------------------------------------------------------------
-void ConvertUnit(const Schema_2x3::IfcNamedUnit& unit,ConversionData& conv)
+void ConvertUnit(const Schema_2x3::IfcNamedUnit& unit, ConversionData2x3& conv)
 {
     if(const Schema_2x3::IfcSIUnit* const si = unit.ToPtr<Schema_2x3::IfcSIUnit>()) {
         if(si->UnitType == "LENGTHUNIT") {
@@ -362,7 +437,7 @@ void ConvertUnit(const Schema_2x3::IfcNamedUnit& unit,ConversionData& conv)
 }
 
 // ------------------------------------------------------------------------------------------------
-void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData& conv)
+void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData2x3& conv)
 {
     try {
         const ::Assimp::STEP::EXPRESS::ENTITY& e = dt.To<::Assimp::STEP::EXPRESS::ENTITY>();
@@ -380,7 +455,7 @@ void ConvertUnit(const ::Assimp::STEP::EXPRESS::DataType& dt,ConversionData& con
 }
 
 // ------------------------------------------------------------------------------------------------
-void SetUnits( ConversionData& conv ) {
+void SetUnits( ConversionData2x3 &conv ) {
     // see if we can determine the coordinate space used to express.
     for ( size_t i = 0; i <  conv.proj.UnitsInContext->Units.size(); ++i ) {
         ConvertUnit(*conv.proj.UnitsInContext->Units[i],conv);
@@ -388,7 +463,7 @@ void SetUnits( ConversionData& conv ) {
 }
 
 // ------------------------------------------------------------------------------------------------
-void SetCoordinateSpace(ConversionData& conv) {
+void SetCoordinateSpace(ConversionData2x3 &conv) {
     const Schema_2x3::IfcRepresentationContext* fav( nullptr );
     for ( const Schema_2x3::IfcRepresentationContext& v : conv.proj.RepresentationContexts) {
         fav = &v;
@@ -407,7 +482,7 @@ void SetCoordinateSpace(ConversionData& conv) {
 
 
 // ------------------------------------------------------------------------------------------------
-void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement& place, ConversionData& conv) {
+void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement& place, ConversionData2x3& conv) {
     if ( const Schema_2x3::IfcLocalPlacement* const local = place.ToPtr<Schema_2x3::IfcLocalPlacement>()){
         IfcMatrix4 tmp;
         ConvertAxisPlacement(tmp, *local->RelativePlacement, conv);
@@ -426,7 +501,7 @@ void ResolveObjectPlacement(aiMatrix4x4& m, const Schema_2x3::IfcObjectPlacement
 
 // ------------------------------------------------------------------------------------------------
 bool ProcessMappedItem(const Schema_2x3::IfcMappedItem& mapped, aiNode* nd_src,
-        std::vector<aiNode*> &subnodes_src, unsigned int matid, ConversionData& conv) {
+        std::vector<aiNode*> &subnodes_src, unsigned int matid, ConversionData2x3& conv) {
     // insert a custom node here, the carthesian transform operator is simply a conventional transformation matrix
     std::unique_ptr<aiNode> nd(new aiNode());
     nd->mName.Set("IfcMappedItem");
@@ -547,7 +622,7 @@ struct RateRepresentationPredicate {
 };
 
 // ------------------------------------------------------------------------------------------------
-void ProcessProductRepresentation(const Schema_2x3::IfcProduct& el, aiNode* nd, std::vector< aiNode* >& subnodes, ConversionData& conv)
+void ProcessProductRepresentation(const Schema_2x3::IfcProduct& el, aiNode* nd, std::vector< aiNode* >& subnodes, ConversionData2x3& conv)
 {
     if(!el.Representation) {
         return;
@@ -587,7 +662,7 @@ void ProcessProductRepresentation(const Schema_2x3::IfcProduct& el, aiNode* nd, 
 typedef std::map<std::string, std::string> Metadata;
 
 // ------------------------------------------------------------------------------------------------
-void ProcessMetadata(const Schema_2x3::ListOf< Schema_2x3::Lazy< Schema_2x3::IfcProperty >, 1, 0 >& set, ConversionData& conv, Metadata& properties,
+void ProcessMetadata(const Schema_2x3::ListOf< Schema_2x3::Lazy< Schema_2x3::IfcProperty >, 1, 0 >& set, ConversionData2x3& conv, Metadata& properties,
         const std::string& prefix = "",
         unsigned int nest = 0) {
     for(const Schema_2x3::IfcProperty& property : set) {
@@ -654,8 +729,10 @@ void ProcessMetadata(const Schema_2x3::ListOf< Schema_2x3::Lazy< Schema_2x3::Ifc
 
 
 // ------------------------------------------------------------------------------------------------
-void ProcessMetadata(uint64_t relDefinesByPropertiesID, ConversionData& conv, Metadata& properties)
-{
+template<class TConv>
+inline
+void ProcessMetadata(uint64_t relDefinesByPropertiesID, TConv& conv, Metadata& properties) {
+    const Schema_2x3::IfcRelDefinesByProperties* const pset = conv.db.GetObject( relDefinesByPropertiesID )->ToPtr<Schema_2x3::IfcRelDefinesByProperties>();
     if (const Schema_2x3::IfcRelDefinesByProperties* const pset = conv.db.GetObject(relDefinesByPropertiesID)->ToPtr<Schema_2x3::IfcRelDefinesByProperties>()) {
         if (const Schema_2x3::IfcPropertySet* const set = conv.db.GetObject(pset->RelatingPropertyDefinition->GetID())->ToPtr<Schema_2x3::IfcPropertySet>()) {
             ProcessMetadata(set->HasProperties, conv, properties);
@@ -664,7 +741,9 @@ void ProcessMetadata(uint64_t relDefinesByPropertiesID, ConversionData& conv, Me
 }
 
 // ------------------------------------------------------------------------------------------------
-aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el, ConversionData& conv, std::vector<TempOpening>* collect_openings = NULL)
+template<class TConv>
+inline
+aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el, TConv &conv, std::vector<TempOpening>* collect_openings = NULL)
 {
     const STEP::DB::RefMap& refs = conv.db.GetRefs();
 
@@ -864,8 +943,9 @@ aiNode* ProcessSpatialStructure(aiNode* parent, const Schema_2x3::IfcProduct& el
 }
 
 // ------------------------------------------------------------------------------------------------
-void ProcessSpatialStructures(ConversionData& conv)
-{
+template<class TConv>
+inline
+void ProcessSpatialStructures( TConv & conv) {
     // XXX add support for multiple sites (i.e. IfcSpatialStructureElements with composition == COMPLEX)
 
 
@@ -968,7 +1048,7 @@ void MakeTreeRelative(aiNode* start, const aiMatrix4x4& combined)
 }
 
 // ------------------------------------------------------------------------------------------------
-void MakeTreeRelative(ConversionData& conv)
+void MakeTreeRelative( ConversionData2x3& conv)
 {
     MakeTreeRelative(conv.out->mRootNode,IfcMatrix4());
 }

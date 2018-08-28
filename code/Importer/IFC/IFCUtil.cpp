@@ -523,7 +523,7 @@ void ConvertColor(aiColor4D& out, const Schema_2x3::IfcColourRgb& in)
 }
 
 // ------------------------------------------------------------------------------------------------
-void ConvertColor(aiColor4D& out, const Schema_2x3::IfcColourOrFactor& in,ConversionData& conv,const aiColor4D* base)
+void ConvertColor(aiColor4D& out, const Schema_2x3::IfcColourOrFactor& in,ConversionData2x3& conv,const aiColor4D* base)
 {
     if (const ::Assimp::STEP::EXPRESS::REAL* const r = in.ToPtr<::Assimp::STEP::EXPRESS::REAL>()) {
         out.r = out.g = out.b = static_cast<float>(*r);
@@ -645,7 +645,7 @@ void ConvertAxisPlacement(IfcVector3& axis, IfcVector3& pos, const Schema_2x3::I
 }
 
 // ------------------------------------------------------------------------------------------------
-void ConvertAxisPlacement(IfcMatrix4& out, const Schema_2x3::IfcAxis2Placement& in, ConversionData& conv)
+void ConvertAxisPlacement(IfcMatrix4& out, const Schema_2x3::IfcAxis2Placement& in, ConversionData2x3& conv)
 {
     if(const Schema_2x3::IfcAxis2Placement3D* pl3 = in.ResolveSelectPtr<Schema_2x3::IfcAxis2Placement3D>(conv.db)) {
         ConvertAxisPlacement(out,*pl3);

@@ -85,7 +85,6 @@ STEP::TypeError::TypeError (const std::string& s,uint64_t entity /* = ENTITY_NOT
 
 }
 
-
 // ------------------------------------------------------------------------------------------------
 STEP::DB* STEP::ReadFileHeader(std::shared_ptr<IOStream> stream)
 {

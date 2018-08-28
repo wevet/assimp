@@ -139,7 +139,7 @@ void WritePolygon(std::vector<IfcVector3>& resultpoly, TempMesh& result)
 // ------------------------------------------------------------------------------------------------
 void ProcessBooleanHalfSpaceDifference(const Schema_2x3::IfcHalfSpaceSolid* hs, TempMesh& result,
     const TempMesh& first_operand,
-    ConversionData& /*conv*/)
+    ConversionData2x3& /*conv*/)
 {
     ai_assert(hs != NULL);
 
@@ -387,7 +387,7 @@ bool PointInPoly(const IfcVector3& p, const std::vector<IfcVector3>& boundary)
 // ------------------------------------------------------------------------------------------------
 void ProcessPolygonalBoundedBooleanHalfSpaceDifference(const Schema_2x3::IfcPolygonalBoundedHalfSpace* hs, TempMesh& result,
                                                        const TempMesh& first_operand,
-                                                       ConversionData& conv)
+                                                       ConversionData2x3& conv)
 {
     ai_assert(hs != NULL);
 
@@ -719,7 +719,7 @@ void ProcessPolygonalBoundedBooleanHalfSpaceDifference(const Schema_2x3::IfcPoly
 // ------------------------------------------------------------------------------------------------
 void ProcessBooleanExtrudedAreaSolidDifference(const Schema_2x3::IfcExtrudedAreaSolid* as, TempMesh& result,
                                                const TempMesh& first_operand,
-                                               ConversionData& conv)
+                                               ConversionData2x3& conv)
 {
     ai_assert(as != NULL);
 
@@ -766,7 +766,7 @@ void ProcessBooleanExtrudedAreaSolidDifference(const Schema_2x3::IfcExtrudedArea
 }
 
 // ------------------------------------------------------------------------------------------------
-void ProcessBoolean(const Schema_2x3::IfcBooleanResult& boolean, TempMesh& result, ConversionData& conv)
+void ProcessBoolean(const Schema_2x3::IfcBooleanResult& boolean, TempMesh& result, ConversionData2x3& conv)
 {
     // supported CSG operations:
     //   DIFFERENCE
