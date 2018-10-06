@@ -382,6 +382,115 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
 
             aim->mName = mesh.name.empty() ? mesh.id : mesh.name;
 
+            //////
+            Ref<Skin> pSkin;
+            {
+                for (unsigned int n = 0; n < r.nodes.Size(); ++n) {
+                    auto &node = r.nodes[n];
+                    for (unsigned int mm = 0; mm < node.meshes.size(); ++mm) {
+                        if (node.meshes[mm]->id == mesh.id) {
+                            pSkin = node.skin;
+                        }
+                    }
+                }
+
+            }
+
+            if (pSkin) {
+                //r.nodes[0].skin
+                const int offset = 0;
+                Skin& skin = *pSkin;
+                //aim->mNumBones = skin.jointNamesIndex.size()+offset;
+                aim->mNumBones = skin.jointNames.size()+offset;
+                aim->mBones = new C_STRUCT aiBone*[aim->mNumBones+offset];
+                for (unsigned int a = 0; a < aim->mNumBones-offset; ++a) {
+                    aim->mBones[a] = new aiBone();
+
+                    {
+                        auto &node = r.skins[0].jointNames[a];
+                        //auto &node = r.nodes.Get(r.skins[0].jointNames[a]);
+                        //auto &rnode = r.nodes[skin.jointNamesIndex[a]];
+                        //auto *node = &rnode;
+                        std::string nameOrId = node->name.empty() ? node->id : node->name;
+                        aim->mBones[a]->mName = nameOrId;
+
+                        //node->meshes[0]->primitives[0].targets[0].position[0]
+                        //node->meshes[0]->primitives[0].attributes.position[0]
+                    }
+
+                    {
+                        glTF2::mat4 *mp = nullptr;
+                        //skin.inverseBindMatrices->ExtractData(mp);
+                        mp = (mat4*)skin.inverseBindMatrices->GetPointer();
+
+                        float *m = mp[a];
+
+                        aiMatrix4x4 aiM(
+                                //m[0], m[1], m[2], m[3],
+                                //m[0 + 4], m[1 + 4], m[2 + 4], m[3 + 4],
+                                //m[0 + 8], m[1 + 8], m[2 + 8], m[3 + 8],
+                                //m[0 + 12], m[1 + 12], m[2 + 12], m[3 + 12]
+                            m[0], m[0 + 4], m[0 + 8], m[0 + 12],
+                            m[1], m[1 + 4], m[1 + 8], m[1 + 12],
+                            m[2], m[2 + 4], m[2 + 8], m[2 + 12],
+                            m[3], m[3 + 4], m[3 + 8], m[3 + 12]
+                        );
+                        aim->mBones[a]->mOffsetMatrix = aiM;// .Transpose();
+
+                    }
+                    //hhhhh
+
+                    const int JointCount = prim.attributes.joint[0]->count;
+                    const int WeightCount = prim.attributes.weight[0]->count;
+
+                    typedef uint16_t (short4)[4];
+
+                    short4 *pJoint = nullptr;
+                    vec4 *pWeight = nullptr;
+
+                    prim.attributes.joint[0]->ExtractData(pJoint);
+                    prim.attributes.weight[0]->ExtractData(pWeight);
+
+                    std::vector<uint16_t> vIndex;
+                    std::vector<float> wWeight;
+                    for (int j = 0; j < WeightCount; ++j) {
+                        for (int sub = 0; sub < 4; ++sub) {
+                            if (pJoint[j][sub] != a) {
+                                continue;
+                            }
+                            vIndex.push_back(j);
+                            wWeight.push_back(pWeight[j][sub]);
+                            break;
+                        }
+                    }
+
+
+                    //aim->mBones[a]->mNumWeights = prim.attributes.weight[0]->count;
+                    //aim->mBones[a]->mWeights = new aiVertexWeight[aim->mBones[a]->mNumWeights];
+                    aim->mBones[a]->mNumWeights = vIndex.size();
+                    aim->mBones[a]->mWeights = new aiVertexWeight[aim->mBones[a]->mNumWeights];
+
+                    for (uint32_t i = 0; i < aim->mBones[a]->mNumWeights; ++i) {
+                        aim->mBones[a]->mWeights[i].mVertexId = vIndex[i];
+                        aim->mBones[a]->mWeights[i].mWeight = wWeight[i];
+
+                    }
+                    
+                    //prim.attributes.weight[0
+
+
+
+                    //ReadBinaryBone(stream, mesh->mBones[a]);
+                }
+                if (offset == 1) {
+                    aim->mBones[aim->mNumBones - 1] = new aiBone();
+                    aim->mBones[aim->mNumBones - 1]->mName = "ROOT";
+                }
+
+
+            }
+            //////
+
             if (mesh.primitives.size() > 1) {
                 size_t& len = aim->mName.length;
                 aim->mName.data[len] = '-';
@@ -447,13 +556,16 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
                 aim->mNumUVComponents[tc] = attr.texcoord[tc]->GetNumComponents();
 
                 aiVector3D* values = aim->mTextureCoords[tc];
-                for (unsigned int i = 0; i < aim->mNumVertices; ++i) {
-                    values[i].y = 1 - values[i].y; // Flip Y coords
+                //hypatch
+                if (values) {
+                    for (unsigned int i = 0; i < aim->mNumVertices; ++i) {
+                        values[i].y = 1 - values[i].y; // Flip Y coords
+                    }
                 }
             }
 
             std::vector<Mesh::Primitive::Target>& targets = prim.targets;
-            if (targets.size() > 0) {
+            if (targets.size() > 0 && 0) {
                 aim->mNumAnimMeshes = targets.size();
                 aim->mAnimMeshes = new aiAnimMesh*[aim->mNumAnimMeshes];
                 for (size_t i = 0; i < targets.size(); i++) {
@@ -710,7 +822,7 @@ aiNode* ImportNode(aiScene* pScene, glTF2::Asset& r, std::vector<unsigned int>& 
     aiNode* ainode = new aiNode(nameOrId);
 
     if (!node.children.empty()) {
-        ainode->mNumChildren = unsigned(node.children.size());
+        ainode->mNumChildren = static_cast<unsigned int>(node.children.size());
         ainode->mChildren = new aiNode*[ainode->mNumChildren];
 
         for (unsigned int i = 0; i < ainode->mNumChildren; ++i) {
@@ -774,6 +886,34 @@ aiNode* ImportNode(aiScene* pScene, glTF2::Asset& r, std::vector<unsigned int>& 
     return ainode;
 }
 
+
+void llll(aiNode *p, aiNode *root) {
+
+    if (p == nullptr) return;
+
+    for (int i = 0; i < p->mNumChildren; ++i) {
+        llll(p->mChildren[i], root);
+    }
+
+    //printf("%s\n", a->mName.C_Str());
+    if (p != root->FindNode(p->mName.C_Str())) {
+        printf("%s\n", p->mName.C_Str());
+    }
+
+    if (p->mNumChildren == 0) {
+        aiNode *a = p;
+        while (a->mParent) {
+            a = a->mParent;
+        }
+        std::stringstream err;
+        if (a->mName.length) {
+            err << " (" << a->mName.C_Str() << ")";
+            printf("%s\n", a->mName.C_Str());
+        }
+        ASSIMP_LOG_WARN(err.str());
+    }
+}
+
 void glTF2Importer::ImportNodes(glTF2::Asset& r)
 {
     if (!r.scene) return;
@@ -785,21 +925,132 @@ void glTF2Importer::ImportNodes(glTF2::Asset& r)
     if (numRootNodes == 1) { // a single root node: use it
         mScene->mRootNode = ImportNode(mScene, r, meshOffsets, rootNodes[0]);
     }
-    else if (numRootNodes > 1) { // more than one root node: create a fake root
-        aiNode* root = new aiNode("ROOT");
+    else if (numRootNodes) { // more than one root node: create a fake root
+
+        /*
+        aiNode* root = ImportNode(mScene, r, meshOffsets, rootNodes[0]);
+
+        aiNode **newChild = new aiNode*[root->mNumChildren + numRootNodes-1];
+        //root->mChildren = ;
+
+        for (int i = 0; i < root->mNumChildren; ++i) {
+            newChild[i] = root->mChildren[i];
+        }
+
+        for (unsigned int i = 1; i < numRootNodes; ++i) {
+            aiNode* node = ImportNode(mScene, r, meshOffsets, rootNodes[i]);
+            node->mParent = root;
+            newChild[root->mNumChildren + i-1] = node;
+        }
+
+        mScene->mRootNode = root;
+        root->mChildren = newChild;
+        root->mNumChildren += numRootNodes - 1;
+*/
+
+        aiNode* root = new aiNode("__ROOT");
         root->mChildren = new aiNode*[numRootNodes];
         for (unsigned int i = 0; i < numRootNodes; ++i) {
+            if (rootNodes[i]->parent == 0) {
+                //continue;
+            }
             aiNode* node = ImportNode(mScene, r, meshOffsets, rootNodes[i]);
             node->mParent = root;
             root->mChildren[root->mNumChildren++] = node;
         }
         mScene->mRootNode = root;
+
     }
+
+    //
+    {
+
+        llll(mScene->mRootNode, mScene->mRootNode);
+    }
+    //
 
     //if (!mScene->mRootNode) {
     //  mScene->mRootNode = new aiNode("EMPTY");
     //}
 }
+
+void glTF2Importer::ImportAnimations(glTF2::Asset& r)
+{
+    mScene->mNumAnimations = r.animations.Size();
+    mScene->mAnimations = new aiAnimation*[mScene->mNumAnimations];
+    for (unsigned int i = 0; i < mScene->mNumAnimations; ++i) {
+        aiAnimation *a = new aiAnimation();
+
+        a->mNumChannels = r.animations[i].Channels.size(); // trans, rot, scale
+        a->mChannels = new aiNodeAnim*[a->mNumChannels];
+        a->mTicksPerSecond = 1.0;
+
+
+        for (unsigned int j = 0; j < a->mNumChannels; ++j) {
+            aiNodeAnim *n = new aiNodeAnim();
+
+            auto &channel = r.animations[i].Channels[j];
+            auto &sampler = r.animations[i].Samplers[channel.sampler];
+
+            auto &node = channel.target.node;
+            std::string nameOrId = node->name.empty() ? node->id : node->name;
+
+            n->mNodeName = nameOrId;
+
+            int nInput = std::stoi(sampler.input);
+            int nOutput = std::stoi(sampler.output);
+
+
+            if (channel.target.path == "rotation") {
+                n->mNumRotationKeys = r.accessors[nInput].count;
+                n->mRotationKeys = new aiQuatKey[n->mNumRotationKeys];
+                for (int key = 0; key < n->mNumRotationKeys; ++key) {
+
+                    float *f = (float*)r.accessors[nInput].GetPointer();
+                    n->mRotationKeys[key].mTime = f[key];
+
+                    //float *q = (aiQuaternion *)r.accessors[nOutput].GetPointer();
+                    float *q = (float*)r.accessors[nOutput].GetPointer();
+                    //n->mRotationKeys[key].mValue = aiQuaternion(q[key*4+3], q[key*4+0], q[key*4+1], q[key*4+2]);
+                    n->mRotationKeys[key].mValue.x = q[key * 4 + 0];// = aiQuaternion(q[key * 4 + 0], q[key * 4 + 1], q[key * 4 + 2], q[key * 4 + 3]);
+                    n->mRotationKeys[key].mValue.y = q[key * 4 + 1];
+                    n->mRotationKeys[key].mValue.z = q[key * 4 + 2];
+                    n->mRotationKeys[key].mValue.w = q[key * 4 + 3];
+
+                    //n->mRotationKeys[key].mValue = q[key];
+                }
+            }
+            if (channel.target.path == "translation") {
+                n->mNumPositionKeys = r.accessors[nInput].count;
+                n->mPositionKeys = new aiVectorKey[n->mNumPositionKeys];
+                for (int key = 0; key < n->mNumPositionKeys; ++key) {
+
+                    float *f = (float*)r.accessors[nInput].GetPointer();
+                    n->mPositionKeys[key].mTime = f[key];
+
+                    vec3 *q = (vec3*)r.accessors[nOutput].GetPointer();
+                    n->mPositionKeys[key].mValue.Set(q[key][0], q[key][1],q[key][2]);
+                }
+            }
+
+
+            a->mChannels[j] = n;
+        }
+        mScene->mAnimations[i] = a;
+    }
+
+    const unsigned int numImportedMaterials = unsigned(r.materials.Size());
+    Material defaultMaterial;
+
+    mScene->mNumMaterials = numImportedMaterials + 1;
+    mScene->mMaterials = new aiMaterial*[mScene->mNumMaterials];
+    mScene->mMaterials[numImportedMaterials] = ImportMaterial(embeddedTexIdxs, r, defaultMaterial);
+
+    for (unsigned int i = 0; i < numImportedMaterials; ++i) {
+        mScene->mMaterials[i] = ImportMaterial(embeddedTexIdxs, r, r.materials[i]);
+    }
+}
+
 
 void glTF2Importer::ImportEmbeddedTextures(glTF2::Asset& r)
 {
@@ -865,6 +1116,8 @@ void glTF2Importer::InternReadFile(const std::string& pFile, aiScene* pScene, IO
     ImportMeshes(asset);
 
     ImportCameras(asset);
+
+    ImportAnimations(asset);
 
     ImportNodes(asset);
 

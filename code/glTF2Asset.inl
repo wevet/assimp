@@ -44,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Header files, Assimp
 #include <assimp/DefaultLogger.hpp>
+#include <algorithm>
 
 using namespace Assimp;
 
@@ -262,9 +263,14 @@ Ref<T> LazyDict<T>::Retrieve(unsigned int i)
         throw DeadlyImportError("GLTF: Object at index \"" + to_string(i) + "\" is not a JSON object");
     }
 
+	std::vector<char> buffer;
+	buffer.resize(1000);
+	ai_snprintf(buffer.data(), buffer.size(), "%03d", i);
+
     T* inst = new T();
-    inst->id = std::string(mDictId) + "_" + to_string(i);
-    inst->oIndex = i;
+	inst->id = std::string(mDictId) + "_" + to_string(i);
+	//inst->id = std::string(mDictId) + "_" + &buffer[0];
+	inst->oIndex = i;
     ReadMember(obj, "name", inst->name);
     inst->Read(obj, mAsset);
 
@@ -1083,6 +1089,10 @@ inline void Node::Read(Value& obj, Asset& r)
         if (meshRef) this->meshes.push_back(meshRef);
     }
 
+	if (Value* skin = FindUInt(obj, "skin")) {
+		this->skin = r.skins.Retrieve((*skin).GetUint());
+	}
+
     if (Value* camera = FindUInt(obj, "camera")) {
         this->camera = r.cameras.Retrieve(camera->GetUint());
         if (this->camera)
@@ -1100,6 +1110,178 @@ inline void Scene::Read(Value& obj, Asset& r)
                 this->nodes.push_back(node);
         }
     }
+}
+
+inline void Skin::Read(Value& obj, Asset& r)
+{
+	//if (Value* array = FindArray(obj, "skins")) {
+		//for (unsigned int i = 0; i < array->Size(); ++i) {
+			//if (!(*array)[i].IsUint()) continue;
+			//Ref<Node> node = r.nodes.Retrieve((*array)[i].GetUint());
+			//if (node)
+			//	this->nodes.push_back(node);
+	if (Value* name = FindMember(obj, "name")) {
+		this->name = name->GetString();
+		//r.skins.Create(this->name);
+	}
+	if (Value* p = FindUInt(obj, "inverseBindMatrices")) {
+		this->inverseBindMatrices = r.accessors.Retrieve(p->GetUint());
+
+		//if (Value* indices = FindUInt(primitive, "indices")) {
+		//	prim.indices = pAsset_Root.accessors.Retrieve(indices->GetUint());
+		//}
+	}
+
+	if (Value* array = FindArray(obj, "joints")) {
+		this->jointNames.reserve(array->Size());
+		for (unsigned int i = 0; i < array->Size(); ++i) {
+			Value& v = (*array)[i];
+			if (v.IsUint()) {
+				// get/create the child node
+				Ref<Node> chn = r.nodes.Retrieve(v.GetUint());
+				if (chn) {
+					this->jointNames.push_back(chn);
+				}
+			}
+		}
+	}
+}
+
+inline void Animation::Read(Value& obj, Asset& r)
+{
+
+	//std::vector<AnimChannel> Channels;            //!< Connect the output values of the key-frame animation to a specific node in the hierarchy.
+	//AnimParameters Parameters;                    //!< The samplers that interpolate between the key-frames.
+	//std::vector<AnimSampler> Samplers;         //!< The parameterized inputs representing the key-frame data.
+	/*
+	struct AnimSampler {
+	std::string id;               //!< The ID of this sampler.
+	std::string input;            //!< The ID of a parameter in this animation to use as key-frame input.
+	std::string interpolation;    //!< Type of interpolation algorithm to use between key-frames.
+	std::string output;           //!< The ID of a parameter in this animation to use as key-frame output.
+	};
+
+	struct AnimChannel {
+	int sampler;                 //!< The index of a sampler in the containing animation's samplers property.
+
+	struct AnimTarget {
+	Ref<Node> node;          //!< The node to animate.
+	std::string path;        //!< The name of property of the node to animate ("translation", "rotation", or "scale").
+	} target;
+	};
+	*/
+
+	if (Value* array = FindArray(obj, "samplers")) {
+		this->Samplers.reserve(array->Size());
+		for (unsigned int i = 0; i < array->Size(); ++i) {
+			Value& s = (*array)[i];
+
+
+			std::string channelType;
+			int channelSize;
+			switch (i%3) {
+			case 0:
+				channelType = "rotation";
+				break;
+			case 1:
+				channelType = "scale";
+				break;
+			case 2:
+				channelType = "translation";
+				break;
+			}
+			//GetAccessor(channelType)->
+
+			AnimSampler a;
+			{
+				if (Value *v = FindMember(s, "interpolation")) {
+					a.interpolation = v->GetString();
+				}
+				if (Value *v = FindMember(s, "input")) {
+					a.input = std::to_string(v->GetUint());
+				}
+				if (Value *v = FindMember(s, "output")) {
+					a.output = std::to_string(v->GetUint());
+				}
+				//a.input = "TIME";
+				//a.output = channelType;
+			}
+
+			this->Samplers.push_back(a);
+		}
+	}
+
+	if (Value* array = FindArray(obj, "channels")) {
+		this->Channels.reserve(array->Size());
+		for (unsigned int i = 0; i < array->Size(); ++i) {
+			Value& c = (*array)[i];
+
+			AnimChannel a;
+			{
+				a.sampler = FindMember(c, "sampler")->GetUint();
+
+				Value *t = FindObject(c, "target");
+				auto n = FindMember(*t, "node")->GetUint();
+
+				a.target.node = r.nodes.Retrieve(n);
+				a.target.path = FindMember(*t, "path")->GetString();
+			}
+
+			this->Channels.push_back(a);
+		}
+	}
+
+	/*
+	if (Value* array = FindArray(obj, "joints")) {
+		this->jointNames.reserve(array->Size());
+		for (unsigned int i = 0; i < array->Size(); ++i) {
+			Value& v = (*array)[i];
+			if (v.IsUint()) {
+				// get/create the child node
+				Ref<Node> chn = r.nodes.Retrieve(v.GetUint());
+				if (chn) this->jointNames.push_back(chn);
+			}
+		}
+	}
+*/
+
+	/*
+	//if (Value* array = FindArray(obj, "skins")) {
+	//for (unsigned int i = 0; i < array->Size(); ++i) {
+	//if (!(*array)[i].IsUint()) continue;
+	//Ref<Node> node = r.nodes.Retrieve((*array)[i].GetUint());
+	//if (node)
+	//	this->nodes.push_back(node);
+	if (Value* name = FindMember(obj, "name")) {
+		this->name = name->GetString();
+	}
+	if (Value* p = FindUInt(obj, "inverseBindMatrices")) {
+		this->inverseBindMatrices = r.accessors.Retrieve(p->GetUint());
+		//ReadMember(obj, "inverseBindMatrices", this->bindShapeMatrix);
+		glTF2::mat4 *m = nullptr;
+		this->inverseBindMatrices->ExtractData(m);
+		//this->bindShapeMatrix = Nullable<glTF2::mat4>(*m);
+
+		//	p->GetUint();
+
+		//ReadMember(obj, "inverseBindMatrices", this->bindShapeMatrix);
+
+		//if (Value* indices = FindUInt(primitive, "indices")) {
+		//	prim.indices = pAsset_Root.accessors.Retrieve(indices->GetUint());
+		//}
+	}
+	if (Value* array = FindArray(obj, "joints")) {
+		this->jointNames.reserve(array->Size());
+		for (unsigned int i = 0; i < array->Size(); ++i) {
+			Value& v = (*array)[i];
+			if (v.IsUint()) {
+				// get/create the child node
+				Ref<Node> chn = r.nodes.Retrieve(v.GetUint());
+				if (chn) this->jointNames.push_back(chn);
+			}
+		}
+	}
+	*/
 }
 
 inline void AssetMetadata::Read(Document& doc)
@@ -1270,6 +1452,33 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
     if (Value* scene = FindUInt(doc, "scene")) {
         sceneIndex = scene->GetUint();
     }
+
+	{
+		//if (Value* skinsArray = FindArray(doc, "skins")) {
+	//		skins.Retrieve(0);
+	//	}
+	}
+	if (Value* nodeArray = FindArray(doc, "nodes")) {
+		for (int i = 0; i < nodeArray->Size(); ++i) {
+			nodes.Retrieve(i);
+		}
+	}
+	if (Value* nodeArray = FindArray(doc, "accessors")) {
+		for (int i = 0; i < nodeArray->Size(); ++i) {
+			accessors.Retrieve(i);
+		}
+	}
+	if (Value* nodeArray = FindArray(doc, "skins")) {
+		for (int i = 0; i < nodeArray->Size(); ++i) {
+			skins.Retrieve(i);
+		}
+	}
+
+	{
+		if (Value* animMeshesArray = FindArray(doc, "animations")) {
+			animations.Retrieve(0);
+		}
+	}
 
     if (Value* scenesArray = FindArray(doc, "scenes")) {
         if (sceneIndex < scenesArray->Size()) {

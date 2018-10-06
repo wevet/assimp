@@ -205,7 +205,8 @@ inline Ref<Accessor> ExportData(Asset& a, std::string& meshName, Ref<Buffer>& bu
                 if (numCompsOut == 1) {
                   valueTmp = static_cast<unsigned short*>(data)[i];
                 } else {
-                  valueTmp = static_cast<aiVector3D*>(data)[i][j];
+                    //valueTmp = static_cast<aiVector3D*>(data)[i][j];
+                    valueTmp = (static_cast<ai_real*>(data))[i*numCompsOut + j];
                 }
 
                 if (valueTmp < acc->min[j]) {
@@ -982,7 +983,8 @@ inline void ExtractAnimationData(Asset& mAsset, std::string& animId, Ref<Animati
     //-------------------------------------------------------
     // Extract TIME parameter data.
     // Check if the timeStamps are the same for mPositionKeys, mRotationKeys, and mScalingKeys.
-    if(nodeChannel->mNumPositionKeys > 0) {
+
+    if(nodeChannel->mNumPositionKeys > 0 && nodeChannel->mNumPositionKeys > nodeChannel->mNumRotationKeys) {
         typedef float TimeType;
         std::vector<TimeType> timeData;
         timeData.resize(numKeyframes);
@@ -991,6 +993,19 @@ inline void ExtractAnimationData(Asset& mAsset, std::string& animId, Ref<Animati
             // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
             // Check if we have to cast type here. e.g. uint16_t()
             timeData[i] = static_cast<float>(nodeChannel->mPositionKeys[frameIndex].mTime / ticksPerSecond);
+        }
+
+        Ref<Accessor> timeAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), &timeData[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_FLOAT);
+        if (timeAccessor) animRef->Parameters.TIME = timeAccessor;
+    }else if(nodeChannel->mNumRotationKeys > 0) {
+        typedef float TimeType;
+        std::vector<TimeType> timeData;
+        timeData.resize(numKeyframes);
+        for (size_t i = 0; i < numKeyframes; ++i) {
+            size_t frameIndex = i * nodeChannel->mNumRotationKeys / numKeyframes;
+            // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
+            // Check if we have to cast type here. e.g. uint16_t()
+            timeData[i] = static_cast<float>(nodeChannel->mRotationKeys[frameIndex].mTime / ticksPerSecond);
         }
 
         Ref<Accessor> timeAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), &timeData[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_FLOAT);
@@ -1061,14 +1076,20 @@ void glTF2Exporter::ExportAnimations()
             nameAnim = anim->mName.C_Str();
         }
 
+        // It appears that assimp stores this type of animation as multiple animations.
+        // where each aiNodeAnim in mChannels animates a specific node.
+        std::string name = nameAnim;// +"_" + to_string(channelIndex);
+        name = mAsset->FindUniqueID(name, "animation");
+        Ref<Animation> animRef = mAsset->animations.Create(name);
+
         for (unsigned int channelIndex = 0; channelIndex < anim->mNumChannels; ++channelIndex) {
             const aiNodeAnim* nodeChannel = anim->mChannels[channelIndex];
 
             // It appears that assimp stores this type of animation as multiple animations.
             // where each aiNodeAnim in mChannels animates a specific node.
-            std::string name = nameAnim + "_" + to_string(channelIndex);
-            name = mAsset->FindUniqueID(name, "animation");
-            Ref<Animation> animRef = mAsset->animations.Create(name);
+            //std::string name = nameAnim + "_" + to_string(channelIndex);
+            //name = mAsset->FindUniqueID(name, "animation");
+            //Ref<Animation> animRef = mAsset->animations.Create(name);
 
             // Parameters
             ExtractAnimationData(*mAsset, name, animRef, bufferRef, nodeChannel, static_cast<float>(anim->mTicksPerSecond));

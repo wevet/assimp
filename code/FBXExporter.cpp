@@ -67,6 +67,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <array>
 #include <unordered_set>
 
+//
+class CompareNode{
+public:
+    bool operator()(const aiNode *left, const aiNode *right) const {
+        bool b = false;
+        if (left == nullptr || right == nullptr) {
+            return b;
+        }
+        if (left->mName.C_Str() == nullptr || right->mName.C_Str() == nullptr) {
+            return b;
+        }
+        b = strcmp(left->mName.C_Str(), right->mName.C_Str()) < 0;
+
+        return b;
+    }
+};
+//
+
+
 // RESOURCES:
 // https://code.blender.org/2013/08/fbx-binary-file-format-specification/
 // https://wiki.blender.org/index.php/User:Mont29/Foundation/FBX_File_Structure
@@ -1573,11 +1592,14 @@ void FBXExporter::WriteObjects ()
     // one sticky point is that the number of vertices may not match,
     // because assimp splits vertices by normal, uv, etc.
 
+    //typedef std::set<const aiNode*, CompareNode> sortset;
+    typedef std::set<const aiNode*, CompareNode> sortset;
+
     // first we should mark the skeleton for each mesh.
     // the skeleton must include not only the aiBones,
     // but also all their parent nodes.
     // anything that affects the position of any bone node must be included.
-    std::vector<std::set<const aiNode*>> skeleton_by_mesh(mScene->mNumMeshes);
+    std::vector<sortset> skeleton_by_mesh(mScene->mNumMeshes);
     // at the same time we can build a list of all the skeleton nodes,
     // which will be used later to mark them as type "limbNode".
     std::unordered_set<const aiNode*> limbnodes;
@@ -1585,12 +1607,14 @@ void FBXExporter::WriteObjects ()
     std::map<std::string,aiNode*> node_by_bone;
     for (size_t mi = 0; mi < mScene->mNumMeshes; ++mi) {
         const aiMesh* m = mScene->mMeshes[mi];
-        std::set<const aiNode*> skeleton;
+        //auto ff = [](const aiNode*& x, const aiNode*& y) { return strcmp(x->mName.C_Str(), y->mName.C_Str()) >= 0; };
+
+        sortset skeleton;
         for (size_t bi =0; bi < m->mNumBones; ++bi) {
             const aiBone* b = m->mBones[bi];
             const std::string name(b->mName.C_Str());
             auto elem = node_by_bone.find(name);
-            aiNode* n;
+            aiNode* n = nullptr;
             if (elem != node_by_bone.end()) {
                 n = elem->second;
             } else {
@@ -1726,7 +1750,7 @@ void FBXExporter::WriteObjects ()
         aiMatrix4x4 mesh_xform = get_world_transform(mesh_node, mScene);
 
         // now make a subdeformer for each bone in the skeleton
-        const std::set<const aiNode*> &skeleton = skeleton_by_mesh[mi];
+        const sortset &skeleton = skeleton_by_mesh[mi];
         for (const aiNode* bone_node : skeleton) {
             // if there's a bone for this node, find it
             const aiBone* b = nullptr;
