@@ -414,6 +414,8 @@ enum aiPrimitiveType
 */
 struct aiAnimMesh
 {
+    C_STRUCT aiString mName;
+
     /** Replacement for aiMesh::mVertices. If this array is non-NULL,
      *  it *must* contain mNumVertices entries. The corresponding
      *  array in the host mesh must be non-NULL as well - animation

@@ -336,6 +336,7 @@ struct aiScene
      */
     C_STRUCT aiMetadata* mMetaData;
 
+    void * mVRMMeta;
 
 #ifdef __cplusplus
 
