@@ -306,6 +306,8 @@ static aiMaterial* ImportMaterial(std::vector<int>& embeddedTexIdxs, Asset& r, M
         aimat->AddProperty(&mat.unlit, 1, AI_MATKEY_GLTF_UNLIT);
     }
 
+    aimat->mShaderName = mat.shaderName;
+
     return aimat;
 }
 
@@ -398,16 +400,17 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
 
             if (pSkin) {
                 //r.nodes[0].skin
-                const int offset = 0;
                 Skin& skin = *pSkin;
+                //skin.
                 //aim->mNumBones = skin.jointNamesIndex.size()+offset;
-                aim->mNumBones = skin.jointNames.size()+offset;
-                aim->mBones = new C_STRUCT aiBone*[aim->mNumBones+offset];
-                for (unsigned int a = 0; a < aim->mNumBones-offset; ++a) {
+                aim->mNumBones = skin.jointNames.size();
+                aim->mBones = new C_STRUCT aiBone*[aim->mNumBones];
+                for (unsigned int a = 0; a < aim->mNumBones; ++a) {
                     aim->mBones[a] = new aiBone();
 
                     {
-                        auto &node = r.skins[0].jointNames[a];
+                        auto &node = skin.jointNames[a];
+                        //auto &node = r.skins.Retrieve(0)->jointNames[a];
                         //auto &node = r.nodes.Get(r.skins[0].jointNames[a]);
                         //auto &rnode = r.nodes[skin.jointNamesIndex[a]];
                         //auto *node = &rnode;
@@ -451,7 +454,7 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
                     prim.attributes.joint[0]->ExtractData(pJoint);
                     prim.attributes.weight[0]->ExtractData(pWeight);
 
-                    std::vector<uint16_t> vIndex;
+                    std::vector<uint32_t> vIndex;
                     std::vector<float> wWeight;
                     for (int j = 0; j < WeightCount; ++j) {
                         for (int sub = 0; sub < 4; ++sub) {
@@ -482,12 +485,6 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
 
                     //ReadBinaryBone(stream, mesh->mBones[a]);
                 }
-                if (offset == 1) {
-                    aim->mBones[aim->mNumBones - 1] = new aiBone();
-                    aim->mBones[aim->mNumBones - 1]->mName = "ROOT";
-                }
-
-
             }
             //////
 
@@ -565,7 +562,7 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
             }
 
             std::vector<Mesh::Primitive::Target>& targets = prim.targets;
-            if (targets.size() > 0 && 0) {
+            if (targets.size() > 0) {
                 aim->mNumAnimMeshes = targets.size();
                 aim->mAnimMeshes = new aiAnimMesh*[aim->mNumAnimMeshes];
                 for (size_t i = 0; i < targets.size(); i++) {
@@ -573,11 +570,13 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
                     aiAnimMesh& aiAnimMesh = *(aim->mAnimMeshes[i]);
                     Mesh::Primitive::Target& target = targets[i];
 
+                    aiAnimMesh.mName = target.name;
+
                     if (target.position.size() > 0) {
                         aiVector3D *positionDiff = nullptr;
                         target.position[0]->ExtractData(positionDiff);
                         for(unsigned int vertexId = 0; vertexId < aim->mNumVertices; vertexId++) {
-                            aiAnimMesh.mVertices[vertexId] += positionDiff[vertexId];
+                            aiAnimMesh.mVertices[vertexId] = positionDiff[vertexId];
                         }
                         delete [] positionDiff;
                     }
@@ -585,7 +584,7 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
                         aiVector3D *normalDiff = nullptr;
                         target.normal[0]->ExtractData(normalDiff);
                         for(unsigned int vertexId = 0; vertexId < aim->mNumVertices; vertexId++) {
-                            aiAnimMesh.mNormals[vertexId] += normalDiff[vertexId];
+                            aiAnimMesh.mNormals[vertexId] = normalDiff[vertexId];
                         }
                         delete [] normalDiff;
                     }
@@ -1048,6 +1047,8 @@ void glTF2Importer::ImportAnimations(glTF2::Asset& r)
 
     for (unsigned int i = 0; i < numImportedMaterials; ++i) {
         mScene->mMaterials[i] = ImportMaterial(embeddedTexIdxs, r, r.materials[i]);
+
+        mScene->mMaterials[i]->mShaderName = r.vrmdata.materialShaderName[mScene->mMaterials[i]->GetName().C_Str()];
     }
 }
 
@@ -1076,6 +1077,8 @@ void glTF2Importer::ImportEmbeddedTextures(glTF2::Asset& r)
         embeddedTexIdxs[i] = idx;
 
         aiTexture* tex = mScene->mTextures[idx] = new aiTexture();
+
+        tex->mFilename = img.uri;
 
         size_t length = img.GetDataLength();
         void* data = img.StealData();
@@ -1120,6 +1123,10 @@ void glTF2Importer::InternReadFile(const std::string& pFile, aiScene* pScene, IO
     ImportAnimations(asset);
 
     ImportNodes(asset);
+
+    {
+        this->mScene->mVRMMeta = asset.vrmdata.vrmdata;
+    }
 
     if (pScene->mNumMeshes == 0) {
         pScene->mFlags |= AI_SCENE_FLAGS_INCOMPLETE;
