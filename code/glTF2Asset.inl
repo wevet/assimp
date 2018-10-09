@@ -1301,7 +1301,7 @@ inline void Animation::Read(Value& obj, Asset& r)
 	*/
 }
 
-static std::string humanBoneNameList[] = {
+static std::vector<std::string> humanBoneNameList = {
 	"hips",
 	"leftUpperLeg","rightUpperLeg","leftLowerLeg","rightLowerLeg",
 	"leftFoot","rightFoot",
@@ -1426,12 +1426,17 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 				std::string s;
 				ReadMember((*hb)[b], "bone", s);
 
-				auto pos = humanBoneNameList->find(s);
-				if (pos == std::string::npos) {
-					continue;
+				for (auto a : humanBoneNameList) {
+					if (a != s) {
+						continue;
+					}
+					vrmdata->humanoidBone[b].humanBoneName = s.c_str();
+
+					int i;
+					ReadMember((*hb)[b], "node", i);
+					vrmdata->humanoidBone[b].nodeName = r.nodes.Retrieve(i)->name;
+					break;
 				}
-				vrmdata->humanoidBone[b].humanBoneName = s.c_str();
-				ReadMember((*hb)[b], "node", vrmdata->humanoidBone[b].node);
 			}
 		}
 	}
