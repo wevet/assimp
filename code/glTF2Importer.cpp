@@ -112,12 +112,12 @@ bool glTF2Importer::CanRead(const std::string& pFile, IOSystem* pIOHandler, bool
 {
     const std::string &extension = GetExtension(pFile);
 
-    if (extension != "gltf" && extension != "glb")
+    if (extension != "gltf" && extension != "glb" && extension != "vrm")
         return false;
 
     if (pIOHandler) {
         glTF2::Asset asset(pIOHandler);
-        asset.Load(pFile, extension == "glb");
+        asset.Load(pFile, extension == "vrm");
         std::string version = asset.asset.version;
         return !version.empty() && version[0] == '2';
     }
@@ -371,7 +371,9 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
     unsigned int k = 0;
 
     for (unsigned int m = 0; m < r.meshes.Size(); ++m) {
-        Mesh& mesh = r.meshes[m];
+        auto &mmm = r.meshes.Retrieve(m);
+        Mesh& mesh = *mmm;
+        //Mesh& mesh = r.meshes[m];
 
         meshOffsets.push_back(k);
         k += unsigned(mesh.primitives.size());
@@ -388,7 +390,8 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
             Ref<Skin> pSkin;
             {
                 for (unsigned int n = 0; n < r.nodes.Size(); ++n) {
-                    auto &node = r.nodes[n];
+                    auto &nnnn = r.nodes.Retrieve(n);
+                    auto node = *nnnn;
                     for (unsigned int mm = 0; mm < node.meshes.size(); ++mm) {
                         if (node.meshes[mm]->id == mesh.id) {
                             pSkin = node.skin;
@@ -451,6 +454,18 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
                     short4 *pJoint = nullptr;
                     vec4 *pWeight = nullptr;
 
+                    {
+                        //ComponentType_BYTE = 5120,
+                         //   ComponentType_UNSIGNED_BYTE = 5121,
+                          //  ComponentType_SHORT = 5122,
+                           // ComponentType_UNSIGNED_SHORT = 5123,
+                           // ComponentType_UNSIGNED_INT = 5125,
+                           // ComponentType_FLOAT = 5126
+                    }
+                    printf("afdsafsd  --%d\n", prim.attributes.joint[0]->componentType);
+                    if (prim.attributes.joint[0]->componentType == ComponentType_SHORT) {
+                        printf("aaa");
+                    }
                     prim.attributes.joint[0]->ExtractData(pJoint);
                     prim.attributes.weight[0]->ExtractData(pWeight);
 
@@ -1107,7 +1122,7 @@ void glTF2Importer::InternReadFile(const std::string& pFile, aiScene* pScene, IO
 
     // read the asset file
     glTF2::Asset asset(pIOHandler);
-    asset.Load(pFile, GetExtension(pFile) == "glb");
+    asset.Load(pFile, GetExtension(pFile) == "vrm");
 
     //
     // Copy the data out

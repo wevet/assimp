@@ -1301,6 +1301,23 @@ inline void Animation::Read(Value& obj, Asset& r)
 	*/
 }
 
+static std::string humanBoneNameList[] = {
+	"hips",
+	"leftUpperLeg","rightUpperLeg","leftLowerLeg","rightLowerLeg",
+	"leftFoot","rightFoot",
+	"spine","chest","neck","head",
+	"leftShoulder","rightShoulder","leftUpperArm","rightUpperArm",
+	"leftLowerArm","rightLowerArm","leftHand","rightHand","leftToes","rightToes",
+	"leftEye","rightEye","jaw",
+	"leftThumbProximal","leftThumbIntermediate","leftThumbDistal","leftIndexProximal",
+	"leftIndexIntermediate","leftIndexDistal","leftMiddleProximal","leftMiddleIntermediate",
+	"leftMiddleDistal","leftRingProximal","leftRingIntermediate","leftRingDistal","leftLittleProximal","leftLittleIntermediate","leftLittleDistal",
+	"rightThumbProximal","rightThumbIntermediate","rightThumbDistal","rightIndexProximal",
+	"rightIndexIntermediate","rightIndexDistal","rightMiddleProximal","rightMiddleIntermediate",
+	"rightMiddleDistal","rightRingProximal","rightRingIntermediate","rightRingDistal","rightLittleProximal",
+	"rightLittleIntermediate","rightLittleDistal","upperChest",
+};
+
 inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 {
 	vrmdata = new VRM::VRMMetadata();
@@ -1332,6 +1349,7 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 					s.gravityDir[1] = FindMember(*v, "y")->GetFloat();
 					s.gravityDir[2] = FindMember(*v, "z")->GetFloat();
 				}
+
 				if (Value *v = FindMember((*nodeArray)[i], "dragForce")) {
 					s.dragForce = v->GetFloat();
 				}
@@ -1400,6 +1418,21 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 			materialShaderName.insert ( std::make_pair(name, shaderName));
 
 
+		}
+	}
+	if (Value* human = FindObject(*vrm, "humanoid")) {
+		if (Value* hb = FindArray(*human, "humanBones")) {
+			for (uint32_t b = 0; b < hb->Size(); ++b) {
+				std::string s;
+				ReadMember((*hb)[b], "bone", s);
+
+				auto pos = humanBoneNameList->find(s);
+				if (pos == std::string::npos) {
+					continue;
+				}
+				vrmdata->humanoidBone[b].humanBoneName = s.c_str();
+				ReadMember((*hb)[b], "node", vrmdata->humanoidBone[b].node);
+			}
 		}
 	}
 
