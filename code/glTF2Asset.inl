@@ -1301,6 +1301,10 @@ inline void Animation::Read(Value& obj, Asset& r)
 	*/
 }
 
+static std::vector<std::string> shapeBlend = {
+	"Neutral","A","I","U","E","O","Blink","Joy","Angry","Sorrow","Fun","LookUp","LookDown","LookLeft","LookRight","Blink_L","Blink_R",
+};
+
 static std::vector<std::string> humanBoneNameList = {
 	"hips",
 	"leftUpperLeg","rightUpperLeg","leftLowerLeg","rightLowerLeg",
@@ -1317,6 +1321,19 @@ static std::vector<std::string> humanBoneNameList = {
 	"rightMiddleDistal","rightRingProximal","rightRingIntermediate","rightRingDistal","rightLittleProximal",
 	"rightLittleIntermediate","rightLittleDistal","upperChest",
 };
+
+static std::string getNodeNameFromMesh(std::string meshName, Asset& r) {
+
+	for (int i = 0; i < r.nodes.Size(); ++i) {
+		Ref<Node> node = r.nodes.Retrieve(i);
+		for (auto &mm : node->meshes) {
+			if (mm->name == meshName) {
+				return node->name;
+			}
+		}
+	}
+	return "";
+}
 
 inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 {
@@ -1436,6 +1453,43 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 					ReadMember((*hb)[b], "node", i);
 					vrmdata->humanoidBone[b].nodeName = r.nodes.Retrieve(i)->name;
 					break;
+				}
+			}
+		}
+	}
+
+	if (Value* blendMaster = FindObject(*vrm, "blendShapeMaster")) {
+		if (Value* bsg = FindArray(*blendMaster, "blendShapeGroups")) {
+
+			vrmdata->blensShapeGroupNum = bsg->Size();
+			vrmdata->blensShapeGourp = new VRM::VRMBlendShapeGroup[vrmdata->blensShapeGroupNum];
+			for (uint32_t iBsg = 0; iBsg < bsg->Size(); ++iBsg) {
+				std::string s;
+				ReadMember((*bsg)[iBsg], "name", s);
+
+				for (auto a : shapeBlend) {
+					if (a != s) {
+						continue;
+					}
+					auto &shapeGroup = vrmdata->blensShapeGourp[iBsg];
+					shapeGroup.groupName = s.c_str();
+
+					Value *binds = FindArray((*bsg)[iBsg], "binds");
+
+					shapeGroup.bindNum = binds->Size();
+					shapeGroup.bind = new VRM::VRMBlendShapeBind[shapeGroup.bindNum];
+
+					for (uint32_t iBind = 0; iBind < shapeGroup.bindNum; ++iBind) {
+						auto &bi = shapeGroup.bind[iBind];
+
+						ReadMember((*binds)[iBind], "mesh", bi.meshID);
+						ReadMember((*binds)[iBind], "index", bi.shapeIndex);
+						ReadMember((*binds)[iBind], "weight", bi.weight);
+
+						bi.meshName = r.meshes.Retrieve(bi.meshID)->name;
+						
+						bi.nodeName = getNodeNameFromMesh(bi.meshName.C_Str(), r).c_str();
+					}
 				}
 			}
 		}
