@@ -1022,6 +1022,14 @@ inline void Mesh::Read(Value& pJSON_Object, Asset& pAsset_Root)
 
                 }
             }
+			// ex name
+			if (Value *ex = FindObject(primitive, "extras")) {
+				if (Value *t = FindArray(*ex, "targetNames")) {
+					for (uint32_t i = 0; i < t->Size(); ++i) {
+						prim.targets[i].name = (*t)[i].GetString();
+					}
+				}
+			}
 
             if (Value* indices = FindUInt(primitive, "indices")) {
 				prim.indices = pAsset_Root.accessors.Retrieve(indices->GetUint());
@@ -1486,7 +1494,15 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 						ReadMember((*binds)[iBind], "index", bi.shapeIndex);
 						ReadMember((*binds)[iBind], "weight", bi.weight);
 
-						bi.meshName = r.meshes.Retrieve(bi.meshID)->name;
+						Ref<Mesh> mp = r.meshes.Retrieve(bi.meshID);
+						int offset = 0;
+						for (uint32_t tmp = 0; tmp < bi.meshID; ++tmp) {
+							Ref<Mesh> mp2 = r.meshes.Retrieve(tmp);
+							offset += (mp2->primitives.size())-1;
+						}
+
+						bi.meshID += offset;
+						bi.meshName = mp->name;
 						
 						bi.nodeName = getNodeNameFromMesh(bi.meshName.C_Str(), r).c_str();
 					}

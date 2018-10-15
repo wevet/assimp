@@ -580,7 +580,7 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
             if (targets.size() > 0) {
                 aim->mNumAnimMeshes = targets.size();
                 aim->mAnimMeshes = new aiAnimMesh*[aim->mNumAnimMeshes];
-                for (size_t i = 0; i < targets.size(); i++) {
+                for (size_t i = 0; i < aim->mNumAnimMeshes; i++) {
                     aim->mAnimMeshes[i] = aiCreateAnimMesh(aim);
                     aiAnimMesh& aiAnimMesh = *(aim->mAnimMeshes[i]);
                     Mesh::Primitive::Target& target = targets[i];
@@ -589,11 +589,14 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
 
                     if (target.position.size() > 0) {
                         aiVector3D *positionDiff = nullptr;
+                        if (target.position[0]->count != aim->mNumVertices) {
+                            printf("aaaaa");
+                        }
                         target.position[0]->ExtractData(positionDiff);
-                        for(unsigned int vertexId = 0; vertexId < aim->mNumVertices; vertexId++) {
+                        for (unsigned int vertexId = 0; vertexId < aim->mNumVertices; vertexId++) {
                             aiAnimMesh.mVertices[vertexId] = positionDiff[vertexId];
                         }
-                        delete [] positionDiff;
+                        delete[] positionDiff;
                     }
                     if (target.normal.size() > 0) {
                         aiVector3D *normalDiff = nullptr;
@@ -609,7 +612,6 @@ void glTF2Importer::ImportMeshes(glTF2::Asset& r)
 
                         aiVector3D *tangentDiff = nullptr;
                         target.tangent[0]->ExtractData(tangentDiff);
-
                         for (unsigned int vertexId = 0; vertexId < aim->mNumVertices; ++vertexId) {
                             tangent[vertexId].xyz += tangentDiff[vertexId];
                             aiAnimMesh.mTangents[vertexId] = tangent[vertexId].xyz;

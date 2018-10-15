@@ -54,19 +54,23 @@ aiAnimMesh *aiCreateAnimMesh(const aiMesh *mesh)
     animesh->mNumVertices = mesh->mNumVertices;
     if (mesh->mVertices) {
         animesh->mVertices = new aiVector3D[animesh->mNumVertices];
-        std::memcpy(animesh->mVertices, mesh->mVertices, mesh->mNumVertices * sizeof(aiVector3D));
+        //std::memcpy(animesh->mVertices, mesh->mVertices, mesh->mNumVertices * sizeof(aiVector3D));
+        std::memset(animesh->mVertices, 0, animesh->mNumVertices * sizeof(aiVector3D));
     }
     if (mesh->mNormals) {
         animesh->mNormals = new aiVector3D[animesh->mNumVertices];
-        std::memcpy(animesh->mNormals, mesh->mNormals, mesh->mNumVertices * sizeof(aiVector3D));
+        //std::memcpy(animesh->mNormals, mesh->mNormals, mesh->mNumVertices * sizeof(aiVector3D));
+        std::memset(animesh->mNormals, 0, animesh->mNumVertices * sizeof(aiVector3D));
     }
     if (mesh->mTangents) {
         animesh->mTangents = new aiVector3D[animesh->mNumVertices];
-        std::memcpy(animesh->mTangents, mesh->mTangents, mesh->mNumVertices * sizeof(aiVector3D));
+        //std::memcpy(animesh->mTangents, mesh->mTangents, mesh->mNumVertices * sizeof(aiVector3D));
+        std::memset(animesh->mTangents, 0, animesh->mNumVertices * sizeof(aiVector3D));
     }
     if (mesh->mBitangents) {
         animesh->mBitangents = new aiVector3D[animesh->mNumVertices];
-        std::memcpy(animesh->mBitangents, mesh->mBitangents, mesh->mNumVertices * sizeof(aiVector3D));
+        //std::memcpy(animesh->mBitangents, mesh->mBitangents, mesh->mNumVertices * sizeof(aiVector3D));
+        std::memset(animesh->mBitangents, 0, animesh->mNumVertices * sizeof(aiVector3D));
     }
 
     for (int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; ++i) {
