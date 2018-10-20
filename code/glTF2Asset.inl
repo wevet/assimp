@@ -1505,6 +1505,10 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 						bi.meshName = mp->name;
 						
 						bi.nodeName = getNodeNameFromMesh(bi.meshName.C_Str(), r).c_str();
+
+
+						bi.blendShapeName = mp->primitives[0].targets[bi.shapeIndex].name;
+
 					}
 				}
 			}
