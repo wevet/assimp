@@ -1445,6 +1445,26 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 
 		}
 	}
+	if (Value* meta = FindObject(*vrm, "meta")) {
+		std::string target[] = {
+			"version","author","contactInformation","reference",
+			"title",
+			"allowedUserName",
+			"violentUssageName","sexualUssageName","commercialUssageName",
+			"otherPermissionUrl","licenseName","otherLicenseUrl"
+		};
+		auto &lic = vrmdata->license;
+		lic.licensePairNum = VRM::LIC_max;
+		lic.licensePair = new VRM::VRMLicensePair[lic.licensePairNum];
+
+		for (int i = 0; i < VRM::LIC_max; ++i) {
+			if (Value *v = FindMember(*meta, target[i].c_str())) {
+				lic.licensePair[i].Key = target[i];
+				lic.licensePair[i].Value = v->GetString();
+			}
+		}
+	}
+
 	if (Value* human = FindObject(*vrm, "humanoid")) {
 		if (Value* hb = FindArray(*human, "humanBones")) {
 			for (uint32_t b = 0; b < hb->Size(); ++b) {
@@ -1747,6 +1767,11 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
 				}
 
 				
+			}
+		}
+		if (Value* im = FindArray(doc, "images")) {
+			for (uint32_t m = 0; m < im->Size(); ++m) {
+				images.Retrieve(m);
 			}
 		}
 
