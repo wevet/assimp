@@ -1445,23 +1445,34 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 
 		}
 	}
-	if (Value* meta = FindObject(*vrm, "meta")) {
-		std::string target[] = {
-			"version","author","contactInformation","reference",
-			"title",
-			"allowedUserName",
-			"violentUssageName","sexualUssageName","commercialUssageName",
-			"otherPermissionUrl","licenseName","otherLicenseUrl"
-		};
-		auto &lic = vrmdata->license;
-		lic.licensePairNum = VRM::LIC_max;
-		lic.licensePair = new VRM::VRMLicensePair[lic.licensePairNum];
+	if (1) {
+		if (Value* meta = FindObject(*vrm, "meta")) {
+			std::string target[] = {
+				"version","author","contactInformation","reference",
+				"title", "texture",
+				"allowedUserName",
+				"violentUssageName","sexualUssageName","commercialUssageName",
+				"otherPermissionUrl","licenseName","otherLicenseUrl"
+			};
+			auto &lic = vrmdata->license;
+			lic.licensePairNum = VRM::LIC_max;
+			lic.licensePair = new VRM::VRMLicensePair[lic.licensePairNum];
+			int min = sizeof(target) / sizeof(target[0]);
+			min = (min < VRM::LIC_max) ? min : VRM::LIC_max;
+			for (int i = 0; i < min; ++i) {
+				if (Value *v = FindMember(*meta, target[i].c_str())) {
+					lic.licensePair[i].Key = target[i];
 
-		for (int i = 0; i < VRM::LIC_max; ++i) {
-			if (Value *v = FindMember(*meta, target[i].c_str())) {
-				lic.licensePair[i].Key = target[i];
-				lic.licensePair[i].Value = v->GetString();
+					if (i == VRM::LIC_texture) {
+						lic.licensePair[i].Value = std::to_string(v->GetInt());
+					}
+					else {
+						lic.licensePair[i].Value = v->GetString();
+					}
+				}
 			}
+			lic.licensePair[VRM::LIC_futter].Key = "vrm4u_futter";
+			lic.licensePair[VRM::LIC_futter].Value = "vrm4u_futter";
 		}
 	}
 
@@ -1726,6 +1737,11 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
 			skins.Retrieve(i);
 		}
 	}
+	if (Value* im = FindArray(doc, "images")) {
+		for (uint32_t m = 0; m < im->Size(); ++m) {
+			images.Retrieve(m);
+		}
+	}
 
 	{
 		if (Value* animMeshesArray = FindArray(doc, "animations")) {
@@ -1769,12 +1785,6 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
 				
 			}
 		}
-		if (Value* im = FindArray(doc, "images")) {
-			for (uint32_t m = 0; m < im->Size(); ++m) {
-				images.Retrieve(m);
-			}
-		}
-
 	}
 }
 

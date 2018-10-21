@@ -69,6 +69,7 @@ extern "C" {
             LIC_contactInformation,
             LIC_reference,
             LIC_title,
+            LIC_texture,
             LIC_allowedUserName,
             LIC_violentUssageName,
             LIC_sexualUssageName,
@@ -88,8 +89,8 @@ extern "C" {
 
         struct ASSIMP_API VRMLicense
         {
-            int licensePairNum;
-            VRMLicensePair *licensePair;
+            int licensePairNum = 0;
+            VRMLicensePair *licensePair = nullptr;
         };
         struct ASSIMP_API VRMMetadata
         {
