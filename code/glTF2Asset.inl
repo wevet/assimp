@@ -1432,6 +1432,10 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 	}
 
 	if (Value* mp = FindArray(*vrm, "materialProperties")) {
+		vrmdata->materialNum = mp->Size();
+		vrmdata->material = new VRM::VRMMaterial[vrmdata->materialNum];
+		memset(vrmdata->material, 0, sizeof(VRM::VRMMaterial)*vrmdata->materialNum);
+
 		for (uint32_t m = 0; m < mp->Size(); ++m) {
 			std::string name, shaderName;
 			if (Value *v = FindMember((*mp)[m], "name")) {
@@ -1442,7 +1446,90 @@ inline void GLTF2VRMMetadata::Read(Document& doc, Asset& r)
 			}
 			materialShaderName.insert ( std::make_pair(name, shaderName));
 
+			auto &mat = vrmdata->material[m];
+			auto &pro_f = mat.floatProperties;
+			auto &pro_v = mat.vectorProperties;
+			auto &pro_t = mat.textureProperties;
+			mat.name = name;
+			mat.shaderName = shaderName;
 
+			{
+				struct TT {
+					std::string key;
+					float &value;
+				};
+				TT table[] = {
+					"_Cutoff",		pro_f._Cutoff,
+					"_BumpScale",	pro_f._BumpScale,
+					"_ReceiveShadowRate",	pro_f._ReceiveShadowRate,
+					"_ShadeShift",			pro_f._ShadeShift,
+					"_ShadeToony",			pro_f._ShadeToony,
+					"_LightColorAttenuation",	pro_f._LightColorAttenuation,
+					"_OutlineWidth",			pro_f._OutlineWidth,
+					"_OutlineScaledMaxDistance",	pro_f._OutlineScaledMaxDistance,
+					"_OutlineLightingMix",			pro_f._OutlineLightingMix,
+					"_DebugMode",				pro_f._DebugMode,
+					"_BlendMode",				pro_f._BlendMode,
+					"_OutlineWidthMode",		pro_f._OutlineWidthMode,
+					"_OutlineColorMode",	pro_f._OutlineColorMode,
+					"_CullMode",			pro_f._CullMode,
+					"_OutlineCullMode",		pro_f._OutlineCullMode,
+					"_SrcBlend",			pro_f._SrcBlend,
+					"_DstBlend",			pro_f._DstBlend,
+					"_ZWrite",				pro_f._ZWrite,
+					"_IsFirstSetup",		pro_f._IsFirstSetup,
+				};
+				if (Value *p = FindObject((*mp)[m], "floatProperties")) {
+					for (auto &t : table) {
+						if (ReadMember(*p, t.key.c_str(), t.value)) {
+							break;
+						}
+					}
+				}
+			}
+			{
+				struct TT {
+					std::string key;
+					vec4 &value;
+				};
+				TT table[] = {
+					"_Color",			pro_v._Color,
+					"_ShadeColor",		pro_v._ShadeColor,
+					"_MainTex",			pro_v._MainTex,
+					"_ShadeTexture",	pro_v._ShadeTexture,
+					"_BumpMap",			pro_v._BumpMap,
+					"_ReceiveShadowTexture",	pro_v._ReceiveShadowTexture,
+					"_SphereAdd",				pro_v._SphereAdd,
+					"_EmissionColor",			pro_v._EmissionColor,
+					"_EmissionMap",				pro_v._EmissionMap,
+					"_OutlineWidthTexture",		pro_v._OutlineWidthTexture,
+					"_OutlineColor",			pro_v._OutlineColor,
+				};
+				if (Value *p = FindObject((*mp)[m], "vectorProperties")) {
+					for (auto &t : table) {
+						if (ReadMember(*p, t.key.c_str(), t.value)) {
+							break;
+						}
+					}
+				}
+			}
+			{
+				struct TT {
+					std::string key;
+					int &value;
+				};
+				TT table[] = {
+					"_MainTex",			pro_t._MainTex,
+					"_ShadeTexture",	pro_t._ShadeTexture,
+				};
+				if (Value *p = FindObject((*mp)[m], "textureProperties")) {
+					for (auto &t : table) {
+						if (ReadMember(*p, t.key.c_str(), t.value)) {
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 	if (1) {
@@ -1770,21 +1857,6 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
 			}
 		}
 		vrmdata.Read(doc, *this);
-	}
-	{
-		if (Value* mp = FindArray(doc, "materialProperties")) {
-			for (uint32_t m = 0; m < mp->Size(); ++m) {
-				std::string name, shaderName;
-				if (Value *v = FindMember(mp[m], "name")) {
-					name = v->GetString();
-				}
-				if (Value *v = FindMember(mp[m], "shader")) {
-					shaderName = v->GetString();
-				}
-
-				
-			}
-		}
 	}
 }
 
